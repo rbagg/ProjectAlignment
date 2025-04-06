@@ -1,0 +1,49 @@
+<!-- templates/test_results.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="section">
+        <h2 class="section-title">Artifact Generation Results</h2>
+        <p><a href="{{ url_for('test_form') }}">&larr; Back to test form</a></p>
+
+        <div style="margin-top: 1rem;">
+            <h3>Input Content</h3>
+            <pre style="white-space: pre-wrap; background-color: #f5f5f5; padding: 1rem; overflow-x: auto;">{{ content[:500] }}{% if content|length > 500 %}...{% endif %}</pre>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3>Project Description</h3>
+
+            <h4>Three Sentences</h4>
+            <ol>
+                {% for sentence in description.three_sentences %}
+                    <li>{{ sentence }}</li>
+                {% endfor %}
+            </ol>
+
+            <h4>Three Paragraphs</h4>
+            {% for paragraph in description.three_paragraphs %}
+                <p>{{ paragraph }}</p>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3>Internal Messaging</h3>
+            <p><strong>Subject:</strong> {{ internal.subject }}</p>
+            <p><strong>What It Is:</strong> {{ internal.what_it_is }}</p>
+            <p><strong>Customer Pain:</strong> {{ internal.customer_pain }}</p>
+            <p><strong>Our Solution:</strong> {{ internal.our_solution }}</p>
+            <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3>External Messaging</h3>
+            <p><strong>Headline:</strong> {{ external.headline }}</p>
+            <p><strong>Pain Point:</strong> {{ external.pain_point }}</p>
+            <p><strong>Solution:</strong> {{ external.solution }}</p>
+            <p><strong>Benefits:</strong> {{ external.benefits }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

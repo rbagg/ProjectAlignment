@@ -1,0 +1,37 @@
+<!-- templates/setup.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">Connect Project Documentation</h2>
+            <p>Connect your project documents to keep everything aligned.</p>
+
+            {% if 'google_token' not in session %}
+                <p>First, authenticate with Google to access your documents:</p>
+                <a href="{{ url_for('google_auth') }}" class="button">Connect Google Docs</a>
+            {% else %}
+                <form action="{{ url_for('connect_document') }}" method="post">
+                    <div>
+                        <label for="type">Document Type:</label>
+                        <select name="type" id="type" required>
+                            <option value="google_docs">Google Doc (PRD)</option>
+                            <option value="google_docs">Google Doc (PRFAQ)</option>
+                            <option value="google_docs">Google Doc (Strategy)</option>
+                            <option value="jira">Jira Project</option>
+                            <option value="linear">Linear Project</option>
+                            <option value="confluence">Confluence Page</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="id">Document ID or URL:</label>
+                        <input type="text" name="id" id="id" required placeholder="Enter document ID or URL">
+                    </div>
+
+                    <button type="submit">Connect Document</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

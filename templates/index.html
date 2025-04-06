@@ -1,0 +1,78 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">Project Status</h2>
+            {% if project %}
+                <h3>{{ project.name }}</h3>
+
+                <h4>Project Description</h4>
+                {% if artifacts.description %}
+                    <h5>Three Sentences:</h5>
+                    <ol>
+                        {% for sentence in artifacts.description.three_sentences %}
+                            <li>{{ sentence }}</li>
+                        {% endfor %}
+                    </ol>
+
+                    <h5>Three Paragraphs:</h5>
+                    {% for paragraph in artifacts.description.three_paragraphs %}
+                        <p>{{ paragraph }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p>No description generated yet.</p>
+                {% endif %}
+
+                <form action="{{ url_for('update') }}" method="post">
+                    <button type="submit">Update Project</button>
+                </form>
+            {% else %}
+                <p>No project connected yet. <a href="{{ url_for('setup') }}">Set up a project</a></p>
+            {% endif %}
+        </div>
+
+        {% if project %}
+            <div class="section">
+                <h2 class="section-title">Alignment Suggestions</h2>
+                {% if suggestions %}
+                    <ul>
+                        {% for suggestion in suggestions %}
+                            <li>
+                                <strong>{{ suggestion.description }}</strong><br>
+                                <small>Source: {{ suggestion.source }} → Target: {{ suggestion.target }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No alignment suggestions at this time.</p>
+                {% endif %}
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Messaging</h2>
+
+                <h3>Internal Messaging</h3>
+                {% if artifacts.internal %}
+                    <p><strong>Subject:</strong> {{ artifacts.internal.subject }}</p>
+                    <p><strong>What Changed:</strong> {{ artifacts.internal.what_changed }}</p>
+                    <p><strong>Customer Impact:</strong> {{ artifacts.internal.customer_impact }}</p>
+                    <p><strong>Business Impact:</strong> {{ artifacts.internal.business_impact }}</p>
+                {% else %}
+                    <p>No internal messaging generated yet.</p>
+                {% endif %}
+
+                <h3>External Messaging</h3>
+                {% if artifacts.external %}
+                    <p><strong>Headline:</strong> {{ artifacts.external.headline }}</p>
+                    <p><strong>Pain Point:</strong> {{ artifacts.external.pain_point }}</p>
+                    <p><strong>Solution:</strong> {{ artifacts.external.solution }}</p>
+                    <p><strong>Call to Action:</strong> {{ artifacts.external.call_to_action }}</p>
+                {% else %}
+                    <p>No external messaging generated yet.</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

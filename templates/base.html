@@ -1,0 +1,114 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Alignment Tool</title>
+    <style>
+        /* Minimal CSS with light background and dark text */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f8f8;
+            margin: 0;
+            padding: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3, h4 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            margin-bottom: 2rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: #fff;
+            border: 1px solid #e1e4e8;
+        }
+
+        .section-title {
+            border-bottom: 1px solid #e1e4e8;
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        .flash {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 3px;
+        }
+
+        .flash.success {
+            background-color: #dcffe4;
+            color: #166534;
+        }
+
+        .flash.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        button, .button {
+            background-color: #0366d6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover, .button:hover {
+            background-color: #024ea0;
+        }
+
+        input, textarea, select {
+            padding: 0.5rem;
+            border: 1px solid #e1e4e8;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Project Alignment Tool</h1>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e1e4e8; font-size: 0.8rem; color: #6a737d;">
+        <p>Project Alignment Tool</p>
+    </footer>
+</body>
+</html>
