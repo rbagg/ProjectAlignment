@@ -1,0 +1,35 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="section">
+        <h2 class="section-title">Project Dashboard</h2>
+
+        {% if versions %}
+            <h3>Version History</h3>
+            <ul>
+                {% for version in versions %}
+                    <li>Version from {{ version.timestamp.strftime('%Y-%m-%d %H:%M') }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No versions available yet.</p>
+        {% endif %}
+
+        {% if suggestions %}
+            <h3>Alignment Suggestions</h3>
+            <ul>
+                {% for suggestion in suggestions %}
+                    <li>
+                        <strong>{{ suggestion.description }}</strong><br>
+                        <small>Source: {{ suggestion.source }} → Target: {{ suggestion.target }}</small>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No alignment suggestions at this time.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
