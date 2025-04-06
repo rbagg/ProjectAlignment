@@ -22,25 +22,31 @@ project-alignment-tool/
 │   │   ├── internal_messaging.py      # Team communication generator
 │   │   └── project_description.py     # Project summary generator
 │   │
+│   ├── __init__.py
 │   ├── alignment_service.py           # Alignment analysis service
 │   ├── change_impact_analyzer.py      # Change impact evaluation
 │   └── sync_service.py                # Document synchronization
 │
 ├── static/                            # Static assets
-│   └── (CSS, JS, images)
+│   └── css/
+│       └── minimal.css                # Minimal CSS styling
 │
 ├── templates/                         # HTML templates
 │   ├── base.html                      # Base template layout
+│   ├── dashboard.html                 # Dashboard view
 │   ├── index.html                     # Main dashboard
 │   ├── setup.html                     # Integration setup
 │   ├── test.html                      # Testing interface
-│   └── test_results.html              # Test generation results
+│   └── test_results.html             # Test generation results
 │
 ├── .gitignore                         # Git ignore rules
 ├── .replit                            # Replit configuration
+├── ARCHITECTURE.md                    # This architecture document
 ├── README.md                          # Project documentation
 ├── config.py                          # Application configuration
-├── main.py                            # Application entry point
+├── generated-icon.png                 # Project icon
+├── main.py                           # Application entry point
+├── pyproject.toml                     # Python project metadata
 ├── requirements.txt                   # Python dependencies
-└── uv.lock                            # Dependency lock file
+└── uv.lock                           # Dependency lock file
 ```
