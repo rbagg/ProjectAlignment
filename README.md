@@ -1,105 +1,198 @@
 # Project Alignment Tool
 
-## Overview
+A lightweight tool that keeps project documentation in sync, ensures alignment across all project artifacts, and challenges thinking with critical objections.
 
-Project Alignment Tool is an intelligent application that solves one of the most persistent challenges in software development - keeping project documentation synchronized and ensuring alignment across all project artifacts. When PRDs, tickets, strategy documents, and other project materials get out of sync, teams struggle with miscommunication, wasted effort, and implementation errors.
+## Purpose
 
-This tool monitors changes across all connected project documents and automatically suggests updates to maintain alignment. When a ticket is added, it recommends how the PRD should be updated. When the PRD changes, it suggests what tickets should be created or modified. The system acts as a bridge between what has been written and what has been done, ensuring everyone stays on the same page.
+The Project Alignment Tool serves three core functions:
 
-## Pain Points Addressed
+1. **Documentation Synchronization**: Connects all project documentation (PRD, PRFAQ, strategy, tickets) and keeps everything updated when changes occur. When one document changes, it suggests updates to keep other documents aligned.
 
-Development teams face numerous challenges when project documentation becomes inconsistent:
+2. **Project Clarity**: Automatically generates three key artifacts:
+   - **Project Description**: A concise 3-sentence and 3-paragraph explanation of what the project is, the customer pain point it's solving, and how it's being addressed.
+   - **Internal Messaging**: Clear communication for internal teams about changes, their impact, and business value.
+   - **External Messaging**: Customer-focused messaging explaining the pain point being solved and how the solution addresses it.
 
-* Engineers implement features based on outdated PRDs, resulting in misaligned deliverables
-* Product managers update requirements without corresponding ticket updates, causing confusion
-* Strategy changes aren't reflected in implementation plans, leading to missed business objectives
-* Time is wasted in meetings to reconcile different versions of requirements
-* Lack of clear messaging about what changes were made and why, both internally and externally
+3. **Critical Thinking**: Generates thoughtful objections to challenge assumptions, identify blind spots, and improve the quality of project communications by considering alternative perspectives.
 
-These problems compound in larger organizations or complex projects where many stakeholders create and consume documentation across different tools and formats.
+## Key Features
 
-## Solution
+- **Bidirectional Change Tracking**: Detects changes in any connected document and suggests updates to keep everything aligned.
+- **Artifact Generation**: Automatically creates and updates project descriptions and messaging.
+- **Objection Generation**: Identifies potential issues and challenges in the generated content to encourage critical thinking.
+- **Impact Analysis**: Evaluates if changes maintain project focus or indicate scope drift.
+- **Minimal UI**: Simple, text-focused interface that prioritizes content and insights.
 
-Project Alignment Tool addresses these challenges by:
-
-1. **Connecting documentation across tools**: Integrates with Google Docs (for PRDs/PRFAQs), Jira (for tickets), and Confluence (for strategy documents)
-2. **Detecting meaningful changes**: Uses intelligent analysis to identify when sections, requirements, or tickets are added, modified, or removed
-3. **Suggesting alignment updates**: Provides specific, actionable recommendations to keep documentation in sync
-4. **Generating communication artifacts**: Automatically creates and maintains:
-   - Project descriptions (what it is, pain points addressed, solution approach)
-   - Internal messaging (for team communication)
-   - External messaging (for customer communication)
-5. **Analyzing change impact**: Evaluates if changes maintain project focus or indicate scope drift
-
-The application features a minimalist, text-focused interface that prioritizes content and insights over complex UI elements.
-
-## Key Benefits
-
-Using Project Alignment Tool provides significant advantages for development teams:
-
-* **Reduced miscommunication**: Everyone works from the same, up-to-date information
-* **Time savings**: Eliminate hours spent reconciling different versions of documents
-* **Improved quality**: Fewer implementation errors due to documentation inconsistencies
-* **Better stakeholder alignment**: Clear, consistent messaging about the project and changes
-* **Focus maintenance**: Early detection of scope creep or project drift
-* **Streamlined communication**: Automatically generated artifacts for different audiences
-
-## Technical Architecture
-
-The application is built with a clean, modular architecture:
-
-* Flask-based web application with SQLite database
-* Integration modules for Google Docs, Jira, and Confluence
-* Core services for synchronization, alignment analysis, and artifact generation
-* Minimal UI with light background and dark text for readability
-
-## Getting Started
+## Setup Instructions
 
 ### Prerequisites
 
-* Python 3.7+
-* Flask and SQLAlchemy
-* Access to Google Docs, Jira, and/or Confluence
+- Python 3.7+
+- Flask
+- SQLAlchemy
+- Access to external services (Google Docs, Jira, Linear, Confluence)
+- Claude API key (for content generation)
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Set up environment variables for API access
-4. Run the application: `python main.py`
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/project-alignment-tool.git
+   cd project-alignment-tool
+   ```
 
-### Basic Usage
+2. Create a virtual environment:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-1. Connect your project documents (PRDs, tickets, strategy)
-2. The system will analyze them for initial alignment
-3. As documents change, review suggested updates
-4. Use the generated artifacts for team and customer communication
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
 
-## Example Scenario
+4. Configure environment variables:
+   - Create a `.env` file with the following variables:
+     ```
+     FLASK_APP=main.py
+     FLASK_ENV=development
 
-A product team is building a new feature. The product manager updates the PRD to modify the requirements. Project Alignment Tool:
+     # Claude API 
+     CLAUDE_API_KEY=your_anthropic_api_key
+     CLAUDE_MODEL=claude-3-opus-20240229
 
-1. Detects the changes in the PRD
-2. Analyzes what tickets need to be updated
-3. Suggests specific ticket changes to the engineering team
-4. Generates updated internal messaging explaining the change rationale
-5. Creates external messaging highlighting customer benefits of the change
-6. Evaluates if the change maintains the project's original focus
+     # For Google Docs integration
+     GOOGLE_CLIENT_ID=your_client_id
+     GOOGLE_CLIENT_SECRET=your_client_secret
 
-This ensures the entire team understands what changed, why it changed, and what needs to be done to maintain alignment.
+     # For Jira integration
+     JIRA_API_KEY=your_jira_api_key
+     JIRA_EMAIL=your_jira_email
+     JIRA_DOMAIN=your_jira_domain
 
-## Future Roadmap
+     # For Linear integration
+     LINEAR_API_KEY=your_linear_api_key
 
-* Enhanced AI-powered suggestion engine
-* Additional integrations (GitHub, Notion, Asana)
-* Automated ticket creation/updates
-* Real-time collaborative alignment resolution
-* Custom artifact templates
+     # For Confluence integration
+     CONFLUENCE_API_TOKEN=your_confluence_api_token
+     CONFLUENCE_EMAIL=your_confluence_email
+     CONFLUENCE_DOMAIN=your_confluence_domain
+     ```
 
-## Contributing
+5. Initialize the database:
+   ```
+   flask db init
+   flask db migrate
+   flask db upgrade
+   ```
 
-Contributions are welcome! See our contributing guidelines for details.
+6. Run the application:
+   ```
+   python main.py
+   ```
+
+### Connecting Documents
+
+1. Visit the setup page at `/setup`
+2. Authenticate with Google to connect Google Docs
+3. Connect your project documentation:
+   - PRD (Google Doc)
+   - PRFAQ (Google Doc)
+   - Strategy (Google Doc or Confluence)
+   - Tickets (Jira or Linear)
+
+### Webhooks Configuration
+
+To enable real-time updates, configure webhooks in your connected services to point to:
+
+- Jira: `http://your-domain.com/webhook`
+- Linear: `http://your-domain.com/webhook`
+- Google Docs: Configure the Google Drive API push notifications
+- Confluence: Configure webhooks in Confluence admin
+
+## Using the Critical Objections Feature
+
+The Project Alignment Tool now automatically generates thoughtful objections for each artifact it creates:
+
+1. **Project Description Objections**: Challenges assumptions about the problem definition, solution approach, and implementation realities.
+
+2. **Internal Messaging Objections**: Identifies potential issues with resource requirements, success metrics, and change management needs that might be overlooked.
+
+3. **External Messaging Objections**: Surfaces potential customer concerns, competitive differentiation issues, and value proposition clarity.
+
+These objections are designed to:
+- Challenge core assumptions
+- Identify potential blind spots
+- Suggest alternative perspectives
+- Improve the overall quality of communication
+
+By considering these objections, you can strengthen your project communications and preemptively address potential issues.
+
+## API Endpoints
+
+The application provides several API endpoints:
+
+- `GET /api/suggestions` - Get latest alignment suggestions
+- `GET /api/artifacts` - Get all generated artifacts
+- `GET /api/objections` - Get all generated objections
+
+## Project Structure
+
+```
+project-alignment-tool/
+├── integrations/                      # External service integrations
+│   ├── __init__.py                    # Package initialization
+│   ├── confluence.py                  # Confluence API integration
+│   ├── google_docs.py                 # Google Docs API integration
+│   ├── jira.py                        # Jira API integration
+│   └── linear.py                      # Linear API integration
+│
+├── models/                            # Database models
+│   ├── __init__.py                    # Database initialization
+│   ├── alignment.py                   # Alignment model for suggestions
+│   ├── project.py                     # Project model for content storage
+│   └── version.py                     # Version history model
+│
+├── services/                          # Core business logic
+│   ├── artifacts/                     # Content generation services
+│   │   ├── __init__.py                # Package initialization
+│   │   ├── base_generator.py          # Base class for generators
+│   │   ├── external_messaging.py      # Customer-facing message generator
+│   │   ├── internal_messaging.py      # Team communication generator
+│   │   ├── objection_generator.py     # Objection generation service
+│   │   └── project_description.py     # Project summary generator
+│   │
+│   ├── __init__.py                    # Package initialization
+│   ├── alignment_service.py           # Alignment analysis service
+│   ├── change_impact_analyzer.py      # Change impact evaluation
+│   └── sync_service.py                # Document synchronization
+│
+├── static/                            # Static assets
+│   └── css/
+│       └── minimal.css                # Minimal CSS styling
+│
+├── templates/                         # HTML templates
+│   ├── base.html                      # Base template layout
+│   ├── dashboard.html                 # Dashboard view
+│   ├── index.html                     # Main dashboard
+│   ├── setup.html                     # Integration setup
+│   ├── test.html                      # Testing interface
+│   └── test_results.html              # Test generation results
+│
+├── config.py                          # Application configuration
+├── main.py                            # Application entry point
+├── requirements.txt                   # Python dependencies
+└── README.md                          # This documentation
+```
+
+## Development Notes
+
+- This project uses the Claude API for generating content, objections, and analyzing changes
+- The UI is intentionally minimal to emphasize content and insights
+- The integration modules provide mock implementations that should be replaced with actual API calls
+- The objection generator provides alternative perspectives to encourage critical thinking
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[MIT License](LICENSE)

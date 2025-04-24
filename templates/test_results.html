@@ -26,15 +26,45 @@
             {% for paragraph in description.three_paragraphs %}
                 <p>{{ paragraph }}</p>
             {% endfor %}
+
+            {% if description.objections %}
+                <h4>Critical Objections</h4>
+                <ul class="objections">
+                    {% for objection in description.objections %}
+                        <li>
+                            <strong>{{ objection.title }}</strong>
+                            <p>{{ objection.explanation }}</p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
 
         <div style="margin-top: 2rem;">
             <h3>Internal Messaging</h3>
             <p><strong>Subject:</strong> {{ internal.subject }}</p>
-            <p><strong>What It Is:</strong> {{ internal.what_it_is }}</p>
-            <p><strong>Customer Pain:</strong> {{ internal.customer_pain }}</p>
-            <p><strong>Our Solution:</strong> {{ internal.our_solution }}</p>
-            <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+            {% if internal.what_it_is %}
+                <p><strong>What It Is:</strong> {{ internal.what_it_is }}</p>
+                <p><strong>Customer Pain:</strong> {{ internal.customer_pain }}</p>
+                <p><strong>Our Solution:</strong> {{ internal.our_solution }}</p>
+                <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+            {% elif internal.what_changed %}
+                <p><strong>What Changed:</strong> {{ internal.what_changed }}</p>
+                <p><strong>Customer Impact:</strong> {{ internal.customer_impact }}</p>
+                <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+            {% endif %}
+
+            {% if internal.objections %}
+                <h4>Critical Objections</h4>
+                <ul class="objections">
+                    {% for objection in internal.objections %}
+                        <li>
+                            <strong>{{ objection.title }}</strong>
+                            <p>{{ objection.explanation }}</p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
 
         <div style="margin-top: 2rem;">
@@ -42,7 +72,22 @@
             <p><strong>Headline:</strong> {{ external.headline }}</p>
             <p><strong>Pain Point:</strong> {{ external.pain_point }}</p>
             <p><strong>Solution:</strong> {{ external.solution }}</p>
-            <p><strong>Benefits:</strong> {{ external.benefits }}</p>
+            {% if external.benefits %}
+                <p><strong>Benefits:</strong> {{ external.benefits }}</p>
+            {% endif %}
+            <p><strong>Call to Action:</strong> {{ external.call_to_action }}</p>
+
+            {% if external.objections %}
+                <h4>Critical Objections</h4>
+                <ul class="objections">
+                    {% for objection in external.objections %}
+                        <li>
+                            <strong>{{ objection.title }}</strong>
+                            <p>{{ objection.explanation }}</p>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
     </div>
 </div>

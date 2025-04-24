@@ -1,171 +1,197 @@
 # services/artifacts/project_description.py
 import json
 import logging
-import re
-import requests
 from models import Project
 from flask import current_app
+from .base_generator import BaseGenerator
+from .objection_generator import ObjectionGenerator
 
-# Import prompt function
-try:
-    from prompts import get_prompt
-except ImportError:
-    # Fallback if prompts.py isn't available
-    def get_prompt(prompt_type, context, **kwargs):
-        return f"Generate project description based on: {context}"
+class ProjectDescriptionGenerator(BaseGenerator):
+    """
+    Generator for project descriptions in three sentences and three paragraphs.
 
-class ProjectDescriptionGenerator:
+    This service creates concise descriptions of what the project is, the customer
+    pain point it's solving, and how it's being addressed, along with objections
+    to challenge the user's thinking.
+    """
+
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        """Initialize the generator with a logger and objection generator."""
+        super().__init__()
+        self.objection_generator = ObjectionGenerator()
 
     def get_latest(self):
         """Get the latest generated project description"""
         project = Project.query.order_by(Project.timestamp.desc()).first()
         if project and project.description:
-            return json.loads(project.description)
+            result = project.get_description_dict()
+
+            # Add objections if available
+            if project.description_objections:
+                result['objections'] = project.get_description_objections_list()
+
+            return result
         return None
 
-    def generate(self, project_content, use_moo=False):
+    def generate(self, project_content):
         """
-        Generate a project description in three sentences and three paragraphs
+        Generate a project description in three sentences and three paragraphs using Claude
 
         Args:
             project_content (str): JSON string of project content
-            use_moo (bool): Whether to include Most Obvious Objections
 
         Returns:
             str: JSON string containing the generated descriptions
         """
+        content = self.parse_content(project_content)
 
-        # Always set use_moo to True
-        use_moo = True
-        
-        # Parse content
-        content = json.loads(project_content)
+        # Format the context
+        context = self._format_context(content)
 
-        # Clean any markdown in the content
-        self._clean_markdown_in_content(content)
+        # Create prompt for Claude using master prompt structure
+        prompt = self._create_description_prompt(context)
 
-        # Try to use Claude via direct HTTP first
-        try:
-            # Check if Claude API key is available
-            if current_app.config.get('CLAUDE_API_KEY'):
-                # Format context for Claude
-                context = self._format_context(content)
+        # Generate description
+        description_json = self.generate_with_claude(
+            prompt=prompt,
+            fallback_method=self._rule_based_generation,
+            fallback_args={'content': content}
+        )
 
-                # Determine which prompt to use
-                prompt_type = 'project_description_moo' if use_moo else 'project_description'
+        # Parse the description
+        description = self.parse_content(description_json)
 
-                # Get the appropriate prompt
-                prompt = get_prompt(prompt_type, context)
+        # Generate objections for the description
+        objections_json = self.objection_generator.generate_for_artifact(
+            content, description, 'description')
 
-                # Call Claude API
-                claude_response = self._call_claude_api(prompt)
+        # Combine description and objections
+        description['objections'] = self.parse_content(objections_json)
 
-                # If we got a response, extract JSON and return it
-                if claude_response:
-                    json_start = claude_response.find('{')
-                    json_end = claude_response.rfind('}') + 1
+        return json.dumps(description)
 
-                    if json_start != -1 and json_end != -1:
-                        json_str = claude_response[json_start:json_end]
-                        try:
-                            result = json.loads(json_str)
-                            return json.dumps(result)
-                        except json.JSONDecodeError:
-                            self.logger.error("Failed to parse JSON from Claude response")
-        except Exception as e:
-            self.logger.error(f"Error using Claude: {str(e)}")
+    def _create_description_prompt(self, context):
+        """Create prompt for generating project description using master prompt structure."""
 
-        # Fall back to enhanced rule-based generation
-        return self._enhanced_rule_based_generation(content)
+        # 1. Role & Identity Definition
+        role = "You are a Project Communications Specialist with expertise in distilling complex initiatives into clear, concise descriptions. You excel at identifying core elements of projects and communicating them in both brief and detailed formats suitable for various stakeholders."
 
-    def _call_claude_api(self, prompt):
-        """Call Claude API directly using HTTP requests"""
-        api_key = current_app.config.get('CLAUDE_API_KEY')
-        if not api_key:
-            return None
+        # 2. Context & Background
+        context_section = f"""
+I need to create standardized descriptions for a project based on the following information:
 
-        headers = {
-            'x-api-key': api_key,
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json'
-        }
+{context}
 
-        data = {
-            'model': current_app.config.get('CLAUDE_MODEL', 'claude-3-opus-20240229'),
-            'max_tokens': 1000,
-            'messages': [
-                {'role': 'user', 'content': prompt}
-            ]
-        }
+These descriptions will be used to ensure all stakeholders have a consistent understanding of what the project is, what problem it's solving, and how the solution works.
+"""
 
-        try:
-            response = requests.post(
-                'https://api.anthropic.com/v1/messages',
-                headers=headers,
-                json=data
-            )
-            response.raise_for_status()
-            result = response.json()
-            return result['content'][0]['text']
-        except Exception as e:
-            self.logger.error(f"Error calling Claude API: {e}")
-            return None
+        # 3. Task Definition & Objectives
+        task = """
+Your task is to generate two versions of the project description:
+1. A concise three-sentence description covering what the project is, the customer pain point it's solving, and how it's being addressed
+2. An expanded three-paragraph description that elaborates on these same three points
 
-    def _clean_markdown_in_content(self, content):
-        """Clean any markdown formatting in the content dictionary"""
-        prd = content.get('prd', {})
+Each version must capture the essence of the project while being clear and accessible to both technical and non-technical audiences.
+"""
 
-        # Clean each string field in the PRD
-        for key, value in prd.items():
-            if isinstance(value, str):
-                prd[key] = self._clean_markdown(value)
+        # 4. Format & Structure Guidelines
+        format_guidelines = """
+Structure your response as JSON with the following format:
+{
+    "three_sentences": [
+        "Sentence describing what the project is",
+        "Sentence describing the customer pain point",
+        "Sentence describing how the solution addresses the pain point"
+    ],
+    "three_paragraphs": [
+        "Paragraph elaborating on what the project is (3-5 sentences)",
+        "Paragraph elaborating on the customer pain point (3-5 sentences)",
+        "Paragraph elaborating on the solution approach (3-5 sentences)"
+    ]
+}
 
-        # Clean PRFAQ if exists
-        prfaq = content.get('prfaq', {})
-        if 'press_release' in prfaq and isinstance(prfaq['press_release'], str):
-            prfaq['press_release'] = self._clean_markdown(prfaq['press_release'])
+Each sentence in the three-sentence version should be focused on a single aspect (what, why, how).
+Each paragraph in the three-paragraph version should expand on one of these aspects with supporting details.
+"""
 
-        if 'frequently_asked_questions' in prfaq:
-            for qa in prfaq['frequently_asked_questions']:
-                if 'question' in qa and isinstance(qa['question'], str):
-                    qa['question'] = self._clean_markdown(qa['question'])
-                if 'answer' in qa and isinstance(qa['answer'], str):
-                    qa['answer'] = self._clean_markdown(qa['answer'])
+        # 5. Process Instructions
+        process = """
+Follow these steps to create effective project descriptions:
+1. Review all provided information to identify the project's core purpose
+2. Identify the specific customer pain point being addressed
+3. Extract the key elements of the solution approach
+4. Draft three focused sentences, each addressing one aspect
+5. Expand each sentence into a cohesive paragraph with supporting details
+6. Review for clarity, accuracy, and consistency between the versions
+"""
 
-        # Clean strategy if exists
-        strategy = content.get('strategy', {})
-        for key, value in strategy.items():
-            if isinstance(value, str):
-                strategy[key] = self._clean_markdown(value)
+        # 6. Content Requirements
+        content_req = """
+The descriptions must include:
+- The project's primary function and scope
+- Specific customer pain points or problems being solved
+- The core approach or methodology used to address the problem
+- Concrete benefits or outcomes expected
+- Technical accuracy while remaining accessible
 
-    def _clean_markdown(self, text):
-        """Remove markdown formatting from text"""
-        if not text:
-            return text
+The language should be:
+- Clear and concise without unnecessary jargon
+- Specific rather than generic
+- Active rather than passive
+- Balanced between technical accuracy and accessibility
+"""
 
-        # Remove markdown headers
-        text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+        # 7. Constraints & Limitations
+        constraints = """
+Avoid:
+- Marketing hyperbole or exaggerated claims
+- Technical implementation details unnecessary for understanding the concept
+- Vague or generic descriptions that could apply to any project
+- Focusing on features without connecting them to benefits
+- Introducing scope or elements not supported by the provided information
+"""
 
-        # Remove markdown list markers
-        text = re.sub(r'^\s*[\*\-\+]\s+', '', text, flags=re.MULTILINE)
-        text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
+        # 8. Examples & References
+        examples = """
+Example of a good three-sentence description:
+[
+    "Project Clarity is a document automation system that standardizes and connects all project documentation across departments.",
+    "Teams currently struggle with inconsistent documentation formats and manual updates, leading to misalignment and duplicated effort.",
+    "The solution provides intelligent templates, real-time synchronization, and automated change notifications to maintain alignment with minimal manual effort."
+]
 
-        # Remove markdown emphasis
-        text = re.sub(r'[*_]{1,2}(.*?)[*_]{1,2}', r'\1', text)
+Example of a good paragraph (expanding on the pain point):
+"Currently, teams waste an average of 12 hours per week dealing with documentation inconsistencies across departments. Product requirements, technical specifications, and customer-facing materials often contain conflicting information, leading to implementation errors and rework. When changes occur, updates must be manually propagated across all documents, a process that is error-prone and often overlooked during time-sensitive releases. This results in downstream teams working from outdated information and creates significant alignment issues that impact product quality and customer satisfaction."
+"""
 
-        # Remove markdown code blocks and inline code
-        text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-        text = re.sub(r'`(.*?)`', r'\1', text)
+        # 9. Interaction Guidelines
+        interaction = """
+This description will serve as a foundation for project communications. It should be designed to stand alone without requiring additional explanation, as it will be referenced by stakeholders who may not have been involved in its creation.
+"""
 
-        # Remove HTML tags
-        text = re.sub(r'<[^>]+>', '', text)
+        # 10. Quality Assurance
+        quality = """
+Before finalizing your descriptions, verify that:
+- Both versions accurately reflect the same core information
+- All three aspects (what, why, how) are clearly addressed
+- The descriptions are specific to this project, not generic
+- Technical accuracy is maintained while remaining accessible
+- The language is clear, concise, and free of unnecessary jargon
+- There is a logical flow between sentences and paragraphs
+"""
 
-        # Remove leading/trailing whitespace
-        text = text.strip()
-
-        return text
+        return self.format_prompt(
+            role=role,
+            context=context_section,
+            task=task,
+            format_guidelines=format_guidelines,
+            process=process,
+            content_req=content_req,
+            constraints=constraints,
+            examples=examples,
+            interaction=interaction,
+            quality=quality
+        )
 
     def _format_context(self, content):
         """Format content as context for Claude"""
@@ -175,26 +201,8 @@ class ProjectDescriptionGenerator:
         prd = content.get('prd', {})
         if prd:
             context.append("== Product Requirements Document (PRD) ==")
-
-            # Get project name and context
-            project_name = prd.get('name', 'Project Alignment Tool')
-            context.append(f"Project Name: {project_name}")
-
-            # Add overview with more context
-            if prd.get('overview'):
-                context.append(f"Overview: {prd.get('overview')}")
-
-            # Add problem statement if available
-            if prd.get('problem_statement'):
-                context.append(f"Problem Statement: {prd.get('problem_statement')}")
-
-            # Add solution if available
-            if prd.get('solution'):
-                context.append(f"Solution: {prd.get('solution')}")
-
-            # Add any other fields
             for key, value in prd.items():
-                if key not in ['name', 'overview', 'problem_statement', 'solution'] and isinstance(value, str) and value:
+                if isinstance(value, str) and value:
                     context.append(f"{key.replace('_', ' ').title()}: {value}")
 
         # Add PRFAQ information
@@ -202,9 +210,7 @@ class ProjectDescriptionGenerator:
         if prfaq:
             context.append("\n== Press Release / FAQ ==")
             if 'press_release' in prfaq:
-                pr = prfaq['press_release']
-                context.append(f"Press Release: {pr}")
-
+                context.append(f"Press Release: {prfaq['press_release']}")
             if 'frequently_asked_questions' in prfaq:
                 context.append("FAQs:")
                 for qa in prfaq['frequently_asked_questions']:
@@ -219,127 +225,130 @@ class ProjectDescriptionGenerator:
                 if isinstance(value, str) and value:
                     context.append(f"{key.replace('_', ' ').title()}: {value}")
 
-        # Add ticket information
+        # Add ticket information (summarized)
         tickets = content.get('tickets', [])
         if tickets:
             context.append("\n== Tickets Summary ==")
             context.append(f"Total tickets: {len(tickets)}")
-            for i, ticket in enumerate(tickets[:5]):
+            for i, ticket in enumerate(tickets[:5]):  # Limit to first 5 tickets
                 context.append(f"Ticket {i+1}: {ticket.get('title', '')} - {ticket.get('status', '')}")
+            if len(tickets) > 5:
+                context.append(f"... and {len(tickets) - 5} more tickets")
 
         return "\n".join(context)
 
-    def _enhanced_rule_based_generation(self, content):
-        """
-        Enhanced rule-based generation that tries to extract more meaningful content
-        from the provided documentation
-        """
-        # Extract key information with better parsing
-        project_name = self._extract_project_name(content)
-        overview = self._extract_overview(content)
-        pain_points = self._extract_pain_points(content)
-        solutions = self._extract_solutions(content)
+    def _rule_based_generation(self, content):
+        """Fallback rule-based generation if Claude is unavailable"""
+        # Extract key information from content
+        prd = content.get('prd', {})
+        prfaq = content.get('prfaq', {})
+        strategy = content.get('strategy', {})
+        tickets = content.get('tickets', [])
+
+        # Extract project name and overview
+        project_name = prd.get('name', 'Project')
+        overview = prd.get('overview', '')
+
+        # Extract customer pain points
+        pain_points = []
+        if 'problem_statement' in prd:
+            pain_points.append(prd['problem_statement'])
+        if 'customer_pain_points' in prd:
+            pain_points.extend(prd['customer_pain_points'])
+        if 'frequently_asked_questions' in prfaq:
+            for qa in prfaq['frequently_asked_questions']:
+                if 'problem' in qa.get('question', '').lower():
+                    pain_points.append(qa.get('answer', ''))
+
+        # Extract solution approach
+        solutions = []
+        if 'solution' in prd:
+            solutions.append(prd['solution'])
+        if 'approach' in strategy:
+            solutions.append(strategy['approach'])
 
         # Generate three-sentence description
-        three_sentences = [
-            f"{project_name} is a solution designed to {overview}.",
-            f"It addresses the customer pain point of {pain_points}.",
-            f"The solution works by {solutions}."
-        ]
+        three_sentences = self._generate_three_sentences(
+            project_name, overview, pain_points, solutions)
 
         # Generate three-paragraph description
-        what_it_is = f"{project_name} is a comprehensive solution designed to {overview}. "
-        what_it_is += "It provides users with a seamless experience for managing their workflows and data. "
-        what_it_is += f"This project aims to transform how users interact with project documentation systems."
+        three_paragraphs = self._generate_three_paragraphs(
+            project_name, overview, pain_points, solutions, tickets)
 
-        pain_paragraph = f"Currently, users face significant challenges when attempting to {pain_points}. "
-        pain_paragraph += "These pain points lead to reduced productivity, user frustration, and increased error rates. "
-        pain_paragraph += "Our research indicates that addressing these challenges could improve user satisfaction by up to 40%."
-
-        solution_paragraph = f"{project_name} addresses these challenges by {solutions}. "
-        solution_paragraph += "The implementation includes bidirectional change tracking, artifact generation, and impact analysis. "
-        solution_paragraph += "These enhancements will significantly improve user efficiency and satisfaction."
-
-        three_paragraphs = [what_it_is, pain_paragraph, solution_paragraph]
+        # Generate fallback objections
+        objections = [
+            {
+                "title": "Unclear Problem Definition",
+                "explanation": "The description doesn't clearly quantify the problem's impact or provide evidence that it's a significant issue worth solving."
+            },
+            {
+                "title": "Alternative Solutions Not Addressed",
+                "explanation": "The description doesn't explain why this particular solution approach was chosen over alternatives."
+            },
+            {
+                "title": "Implementation Challenges Understated",
+                "explanation": "The description minimizes potential implementation challenges, particularly around integration with existing systems and processes."
+            }
+        ]
 
         # Format the result
         result = {
             'three_sentences': three_sentences,
-            'three_paragraphs': three_paragraphs
+            'three_paragraphs': three_paragraphs,
+            'objections': objections
         }
 
         return json.dumps(result)
 
-    def _extract_project_name(self, content):
-        """Extract project name with better parsing"""
-        # Try to get from PRD name field
-        prd = content.get('prd', {})
-        if prd.get('name'):
-            return prd.get('name')
+    def _generate_three_sentences(self, project_name, overview, pain_points, solutions):
+        """Generate a three-sentence description of the project"""
+        # Sentence 1: What it is
+        what_it_is = f"{project_name} is a solution designed to {overview[:100]}..."
 
-        # Default
-        return "Project Alignment Tool"
+        # Sentence 2: Pain point
+        pain_point = "It addresses the customer pain point of "
+        if pain_points:
+            pain_point += pain_points[0][:100] + "..."
+        else:
+            pain_point += "improving user experience and workflow efficiency."
 
-    def _extract_overview(self, content):
-        """Extract overview with better parsing"""
-        prd = content.get('prd', {})
+        # Sentence 3: Solution approach
+        solution = "The solution works by "
+        if solutions:
+            solution += solutions[0][:100] + "..."
+        else:
+            solution += "providing an intuitive interface and streamlined process flow."
 
-        # Try to get from overview field
-        if prd.get('overview'):
-            # Get first sentence or first 100 chars
-            overview = prd.get('overview').strip()
-            sentence_match = re.search(r'^([^.!?]+[.!?])', overview)
-            if sentence_match:
-                return sentence_match.group(1).strip()
-            elif len(overview) > 100:
-                return overview[:100].strip() + "..."
-            return overview
+        return [what_it_is, pain_point, solution]
 
-        # Default
-        return "keep project documentation synchronized and ensure alignment across all project artifacts"
+    def _generate_three_paragraphs(self, project_name, overview, pain_points, solutions, tickets):
+        """Generate a three-paragraph description of the project"""
+        # Paragraph 1: What it is (expanded)
+        what_it_is = f"{project_name} is a comprehensive solution designed to {overview}. "
+        what_it_is += "It provides users with a seamless experience for managing their workflows and data. "
+        what_it_is += f"This project aims to transform how users interact with {project_name.lower()} systems."
 
-    def _extract_pain_points(self, content):
-        """Extract pain points with better parsing"""
-        prd = content.get('prd', {})
+        # Paragraph 2: Pain point (expanded)
+        pain_point = "Currently, users face significant challenges when attempting to "
+        if pain_points:
+            pain_point += ", ".join(p[:50] + "..." for p in pain_points[:2])
+        else:
+            pain_point += "complete their tasks efficiently and accurately."
+        pain_point += " These pain points lead to reduced productivity, user frustration, and increased error rates. "
+        pain_point += "Our research indicates that addressing these challenges could improve user satisfaction by up to 40%."
 
-        # Try problem statement first
-        if prd.get('problem_statement'):
-            problem_statement = prd.get('problem_statement').strip()
-            if len(problem_statement) > 100:
-                # Get first sentence or truncate
-                sentence_match = re.search(r'^([^.!?]+[.!?])', problem_statement)
-                if sentence_match:
-                    return sentence_match.group(1).strip()
-                return problem_statement[:100].strip() + "..."
-            return problem_statement
+        # Paragraph 3: Solution approach (expanded)
+        solution = f"{project_name} addresses these challenges by "
+        if solutions:
+            solution += ", ".join(s[:50] + "..." for s in solutions[:2])
+        else:
+            solution += "providing an intuitive user interface and streamlined workflow."
+        solution += " The implementation includes "
+        if tickets:
+            features = [t.get('title', '').split(':')[-1].strip() for t in tickets[:3]]
+            solution += ", ".join(features)
+        else:
+            solution += "key features and improvements to the current system"
+        solution += ". These enhancements will significantly improve user efficiency and satisfaction."
 
-        # Check PRFAQ
-        prfaq = content.get('prfaq', {})
-        if prfaq.get('frequently_asked_questions'):
-            for qa in prfaq.get('frequently_asked_questions'):
-                if 'problem' in qa.get('question', '').lower():
-                    answer = qa.get('answer', '').strip()
-                    if len(answer) > 100:
-                        return answer[:100].strip() + "..."
-                    return answer
-
-        # Default
-        return "keeping documentation in sync, leading to misalignment between PRD and implementation"
-
-    def _extract_solutions(self, content):
-        """Extract solution approach with better parsing"""
-        prd = content.get('prd', {})
-
-        # Try solution field first
-        if prd.get('solution'):
-            solution = prd.get('solution').strip()
-            if len(solution) > 100:
-                # Get first sentence or truncate
-                sentence_match = re.search(r'^([^.!?]+[.!?])', solution)
-                if sentence_match:
-                    return sentence_match.group(1).strip()
-                return solution[:100].strip() + "..."
-            return solution
-
-        # Default
-        return "providing a tool that monitors changes to all project documents and suggests updates to maintain alignment"
+        return [what_it_is, pain_point, solution]
