@@ -15,17 +15,21 @@
         <div style="margin-top: 2rem;">
             <h3>Project Description</h3>
 
-            <h4>Three Sentences</h4>
-            <ol>
-                {% for sentence in description.three_sentences %}
-                    <li>{{ sentence }}</li>
-                {% endfor %}
-            </ol>
+            <div class="tech-section">
+                <div class="tech-label">Core Summary:</div>
+                <ol>
+                    {% for sentence in description.three_sentences %}
+                        <li>{{ sentence }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
 
-            <h4>Three Paragraphs</h4>
-            {% for paragraph in description.three_paragraphs %}
-                <p>{{ paragraph }}</p>
-            {% endfor %}
+            <div class="tech-section">
+                <div class="tech-label">Detailed Description:</div>
+                {% for paragraph in description.three_paragraphs %}
+                    <p>{{ paragraph }}</p>
+                {% endfor %}
+            </div>
 
             {% if description.objections %}
                 <h4>Critical Objections</h4>
@@ -34,6 +38,9 @@
                         <li>
                             <strong>{{ objection.title }}</strong>
                             <p>{{ objection.explanation }}</p>
+                            {% if objection.impact %}
+                            <span class="impact">Impact: {{ objection.impact }}</span>
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>
@@ -42,16 +49,75 @@
 
         <div style="margin-top: 2rem;">
             <h3>Internal Messaging</h3>
-            <p><strong>Subject:</strong> {{ internal.subject }}</p>
+
+            <div class="tech-section">
+                <div class="tech-label">Subject:</div>
+                <p class="tech-content">{{ internal.subject }}</p>
+            </div>
+
             {% if internal.what_it_is %}
-                <p><strong>What It Is:</strong> {{ internal.what_it_is }}</p>
-                <p><strong>Customer Pain:</strong> {{ internal.customer_pain }}</p>
-                <p><strong>Our Solution:</strong> {{ internal.our_solution }}</p>
-                <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+                <div class="tech-section">
+                    <div class="tech-label">What It Is:</div>
+                    <p class="tech-content">{{ internal.what_it_is }}</p>
+                </div>
+
+                <div class="tech-section">
+                    <div class="tech-label">Customer Pain:</div>
+                    <p class="tech-content">{{ internal.customer_pain }}</p>
+                </div>
+
+                <div class="tech-section">
+                    <div class="tech-label">Our Solution:</div>
+                    <p class="tech-content">{{ internal.our_solution }}</p>
+                </div>
+
+                <div class="tech-section">
+                    <div class="tech-label">Business Impact:</div>
+                    <p class="tech-content">{{ internal.business_impact }}</p>
+                </div>
+
+                {% if internal.timeline %}
+                <div class="tech-section">
+                    <div class="tech-label">Timeline:</div>
+                    <p class="tech-content">{{ internal.timeline }}</p>
+                </div>
+                {% endif %}
+
+                {% if internal.team_needs %}
+                <div class="tech-section">
+                    <div class="tech-label">Team Needs:</div>
+                    <p class="tech-content">{{ internal.team_needs }}</p>
+                </div>
+                {% endif %}
             {% elif internal.what_changed %}
-                <p><strong>What Changed:</strong> {{ internal.what_changed }}</p>
-                <p><strong>Customer Impact:</strong> {{ internal.customer_impact }}</p>
-                <p><strong>Business Impact:</strong> {{ internal.business_impact }}</p>
+                <div class="tech-section">
+                    <div class="tech-label">What Changed:</div>
+                    <p class="tech-content">{{ internal.what_changed }}</p>
+                </div>
+
+                <div class="tech-section">
+                    <div class="tech-label">Customer Impact:</div>
+                    <p class="tech-content">{{ internal.customer_impact }}</p>
+                </div>
+
+                <div class="tech-section">
+                    <div class="tech-label">Business Impact:</div>
+                    <p class="tech-content">{{ internal.business_impact }}</p>
+                </div>
+
+                {% if internal.timeline_impact %}
+                <div class="tech-section">
+                    <div class="tech-label">Timeline Impact:</div>
+                    <p class="tech-content">{{ internal.timeline_impact }}</p>
+                </div>
+                {% endif %}
+
+                {% if internal.team_needs %}
+                <div class="tech-section">
+                    <div class="tech-label">Team Needs:</div>
+                    <p class="tech-content">{{ internal.team_needs }}</p>
+                </div>
+                {% endif %}
             {% endif %}
 
             {% if internal.objections %}
@@ -61,6 +127,9 @@
                         <li>
                             <strong>{{ objection.title }}</strong>
                             <p>{{ objection.explanation }}</p>
+                            {% if objection.impact %}
+                            <span class="impact">Impact: {{ objection.impact }}</span>
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>
@@ -69,13 +138,33 @@
 
         <div style="margin-top: 2rem;">
             <h3>External Messaging</h3>
-            <p><strong>Headline:</strong> {{ external.headline }}</p>
-            <p><strong>Pain Point:</strong> {{ external.pain_point }}</p>
-            <p><strong>Solution:</strong> {{ external.solution }}</p>
+
+            <div class="tech-section">
+                <div class="tech-label">Headline:</div>
+                <p class="tech-content"><strong>{{ external.headline }}</strong></p>
+            </div>
+
+            <div class="tech-section">
+                <div class="tech-label">Pain Point:</div>
+                <p class="tech-content">{{ external.pain_point }}</p>
+            </div>
+
+            <div class="tech-section">
+                <div class="tech-label">Solution:</div>
+                <p class="tech-content">{{ external.solution }}</p>
+            </div>
+
             {% if external.benefits %}
-                <p><strong>Benefits:</strong> {{ external.benefits }}</p>
+            <div class="tech-section">
+                <div class="tech-label">Benefits:</div>
+                <p class="tech-content">{{ external.benefits }}</p>
+            </div>
             {% endif %}
-            <p><strong>Call to Action:</strong> {{ external.call_to_action }}</p>
+
+            <div class="tech-section">
+                <div class="tech-label">Call to Action:</div>
+                <p class="tech-content">{{ external.call_to_action }}</p>
+            </div>
 
             {% if external.objections %}
                 <h4>Critical Objections</h4>
@@ -84,6 +173,9 @@
                         <li>
                             <strong>{{ objection.title }}</strong>
                             <p>{{ objection.explanation }}</p>
+                            {% if objection.impact %}
+                            <span class="impact">Impact: {{ objection.impact }}</span>
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>

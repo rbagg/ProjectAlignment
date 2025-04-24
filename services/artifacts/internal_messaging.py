@@ -8,12 +8,8 @@ from .objection_generator import ObjectionGenerator
 
 class InternalMessagingGenerator(BaseGenerator):
     """
-    Generator for internal messaging about the project.
-
-    This service creates messaging for internal stakeholders about what
-    the project is, the customer pain point it addresses, the solution
-    approach, and the business impact, along with objections to challenge
-    thinking.
+    Generates internal messaging about the project.
+    Creates factual updates for team members and stakeholders.
     """
 
     def __init__(self):
@@ -36,7 +32,7 @@ class InternalMessagingGenerator(BaseGenerator):
 
     def generate(self, project_content, changes=None):
         """
-        Generate internal messaging for the project or changes using Claude
+        Generate internal messaging for the project or changes.
 
         Args:
             project_content (str): JSON string of project content
@@ -79,108 +75,118 @@ class InternalMessagingGenerator(BaseGenerator):
         """Create prompt for generating messaging for the entire project"""
 
         # 1. Role & Identity Definition
-        role = "You are an Internal Communications Strategist with expertise in crafting clear, compelling messages for organizational stakeholders. You excel at translating complex initiatives into concise, actionable communications that drive alignment and engagement."
+        role = "You are a Technical Project Communicator who creates factual, direct internal team messaging."
 
         # 2. Context & Background
         context_section = f"""
-I need to create internal messaging about a project based on the following information:
-
+Project information:
 {context}
 
-This messaging will be used to communicate with internal teams and stakeholders about the project's purpose, value, and impact. It needs to be clear, informative, and focused on business value.
+Create internal messaging for team members and stakeholders about this project.
 """
 
         # 3. Task Definition & Objectives
         task = """
-Your task is to generate internal messaging that clearly explains:
-1. What the project is
-2. The customer pain point it addresses
-3. How we're solving it
-4. The business impact and value
+Generate internal messaging with:
+1. A clear subject line
+2. A direct explanation of what the project is
+3. A precise statement of the customer problem
+4. A factual description of the solution approach
+5. Specific business impact with metrics when possible
 
-The messaging should help internal stakeholders understand the project's purpose and importance without requiring extensive background knowledge.
+Focus on operational clarity and factual information teams need.
 """
 
         # 4. Format & Structure Guidelines
         format_guidelines = """
-Structure your response as JSON with the following format:
+Format as JSON with:
 {
-    "subject": "Internal Brief: [Project Name]",
-    "what_it_is": "Clear description of what the project is (2-3 sentences)",
-    "customer_pain": "Description of the customer pain point (2-3 sentences)",
-    "our_solution": "Description of our solution approach (2-3 sentences)",
-    "business_impact": "Description of the business impact and value (2-3 sentences)"
+    "subject": "Internal: [Project Name] - [Primary Focus]",
+    "what_it_is": "Description of what the project is (1-2 sentences)",
+    "customer_pain": "Description of the customer problem (1-2 sentences)",
+    "our_solution": "Description of our solution approach (1-2 sentences)",
+    "business_impact": "Specific business impact with metrics (1-2 sentences)",
+    "timeline": "Key dates and milestones (1-2 sentences)",
+    "team_needs": "Required resources and dependencies (1-2 sentences)"
 }
-
-Each section should be concise but informative, avoiding unnecessary jargon while maintaining technical accuracy.
 """
 
         # 5. Process Instructions
         process = """
-Follow these steps to create effective internal messaging:
-1. Review all provided information to understand the project's purpose and scope
-2. Identify the key customer pain points being addressed
-3. Extract the core solution elements and approach
-4. Determine the primary business impacts and value drivers
-5. Draft clear, concise messaging for each required section
-6. Ensure the messaging maintains a balanced view of opportunities and challenges
-7. Review for clarity, accuracy, and alignment with organizational communication style
+1. Extract the core project purpose
+2. Identify specific customer problems
+3. Determine key solution elements
+4. Calculate business impact and metrics
+5. Identify key timeline milestones
+6. Determine resource requirements
+7. Draft direct, factual statements for each section
+8. Focus on information teams need to act
 """
 
         # 6. Content Requirements
         content_req = """
-The messaging must include:
-- A clear definition of the project scope and purpose
-- Specific customer problems being solved (with metrics when available)
-- The core approach or methodology used to address the problem
-- Concrete business benefits or outcomes expected
-- Technical accuracy while remaining accessible to non-technical stakeholders
+Content must be:
+- Factual with specific details
+- Quantifiable where possible (numbers, percentages)
+- Direct and concise (under 20 words per sentence)
+- Free of subjective claims
+- Written in active voice
+- Clear about resource needs and dependencies
+- Specific about timeline and milestones
+- Practical about implementation requirements
 
-The language should be:
-- Clear and concise without unnecessary jargon
-- Specific rather than generic
-- Balanced between optimism and realism
-- Action-oriented and focused on outcomes
+The subject must clearly identify the project and focus.
+The project description must state what teams will build.
+Customer pain must specify actual problems, ideally with metrics.
+Solution approach must outline how teams will solve the problem.
+Business impact must include specific metrics when possible.
+Timeline must include concrete dates or timeframes.
+Team needs must specify required resources.
 """
 
         # 7. Constraints & Limitations
         constraints = """
-Avoid:
-- Marketing hype or overly promotional language
-- Technical implementation details unnecessary for understanding the concept
-- Vague or generic descriptions that could apply to any project
-- Focusing on features without connecting them to business value
-- Making absolute claims or promises that may be difficult to fulfill
-- Downplaying implementation challenges or resource requirements
+Do not:
+- Use marketing language or hype
+- Make subjective claims without evidence
+- Use unnecessary adjectives or adverbs
+- Include vague statements
+- Use passive voice
+- Exceed 20 words per sentence
+- Omit resource requirements or dependencies
+- Hide implementation challenges
 """
 
         # 8. Examples & References
         examples = """
-Example of effective internal messaging:
+Example of effective, factual internal messaging:
 
 {
-    "subject": "Internal Brief: Customer Journey Analytics Platform",
-    "what_it_is": "The Customer Journey Analytics Platform is a new data integration and visualization system that connects customer interactions across all touchpoints. It provides a unified view of the customer journey, enabling teams to identify friction points and optimization opportunities.",
-    "customer_pain": "Our customers currently struggle to understand how their users navigate across different channels, leading to disjointed experiences and missed conversion opportunities. They lack visibility into the complete customer journey, which makes it difficult to prioritize improvements that will have the greatest impact.",
-    "our_solution": "Our solution integrates data from all customer touchpoints into a unified journey map with advanced analytics. It automatically identifies friction points, visualizes conversion paths, and provides actionable recommendations for experience improvements. The platform employs machine learning to predict likely customer behaviors and proactively suggest optimizations.",
-    "business_impact": "This initiative will increase our average deal size by 30% by addressing our customers' highest-priority analytics need. It also positions us to expand into the enterprise segment, where journey analytics capabilities are a critical requirement. Initial customer feedback indicates this will significantly improve competitive win rates and customer retention."
+    "subject": "Internal: Document Sync Tool - Engineering Kickoff",
+    "what_it_is": "A system that monitors document changes across PRDs, tickets, and strategy docs. It automatically identifies inconsistencies and suggests updates.",
+    "customer_pain": "Teams waste 4.2 hours weekly reconciling inconsistent documentation. This causes a 28% increase in implementation errors and delays project completion by 2-3 weeks.",
+    "our_solution": "We'll build connectors for Jira, Confluence, and Google Docs using their APIs. Our ML-based inconsistency detection will flag issues and suggest specific updates.",
+    "business_impact": "Will reduce documentation work by 62%, decrease implementation errors by 45%, and shorten project timelines by 2 weeks on average. Expected to increase team capacity by 8%.",
+    "timeline": "Design complete by June 5. Alpha by July 20. Beta by August 15. GA release by September 30.",
+    "team_needs": "Requires 2 backend engineers, 1 ML specialist, and 1 frontend developer for 12 weeks. Dependencies on Jira API upgrade scheduled for June 10."
 }
 """
 
         # 9. Interaction Guidelines
         interaction = """
-This messaging will be shared with internal teams who need to understand and support the project. It should provide enough context that they can explain the project's purpose and value to others, even if they aren't directly involved in its implementation.
+This messaging will be shared with internal teams who need specific, actionable information about the project. Focus on what they need to know to contribute effectively.
 """
 
         # 10. Quality Assurance
         quality = """
-Before finalizing your messaging, verify that:
-- All four required sections are complete and focused on their specific purpose
-- The messaging accurately reflects the project information provided
-- Business value is clearly articulated in concrete terms
-- The language is accessible to both technical and business stakeholders
-- The messaging maintains a realistic balance between opportunities and challenges
-- There is a logical flow between the different sections
+Verify the output:
+- Contains specific details, not generalities
+- Includes quantifiable elements where possible
+- Uses direct, concise language
+- Includes concrete timeline milestones
+- Specifies actual resource requirements
+- Presents business impact with metrics
+- Uses active voice exclusively
 """
 
         return self.format_prompt(
@@ -200,107 +206,115 @@ Before finalizing your messaging, verify that:
         """Create prompt for generating messaging about project changes"""
 
         # 1. Role & Identity Definition
-        role = "You are an Internal Change Communications Specialist with expertise in communicating project updates, scope changes, and evolving initiatives to organizational stakeholders. You excel at explaining what has changed, why it matters, and how it impacts the business."
+        role = "You are a Technical Project Update Communicator who creates factual, direct internal team messaging about project changes."
 
         # 2. Context & Background
         context_section = f"""
-I need to create internal messaging about changes to a project based on the following information:
-
+Project changes:
 {context}
 
-The following changes have been made to the project:
-{json.dumps(changes, indent=2)}
-
-This messaging will be used to update internal teams and stakeholders about what has changed in the project and the impact of these changes. It needs to be clear, specific, and focused on what stakeholders need to know.
+Create internal messaging about these project changes for team members and stakeholders.
 """
 
         # 3. Task Definition & Objectives
         task = """
-Your task is to generate internal update messaging that clearly explains:
-1. What has changed in the project
-2. How these changes impact the customer pain point being addressed
-3. The business impact of these changes
+Generate internal update messaging with:
+1. A clear subject line about the changes
+2. A direct explanation of what changed
+3. How these changes impact customers
+4. How these changes affect the business
+5. Timeline impacts
+6. Resource requirement changes
 
-The messaging should help internal stakeholders understand the nature and significance of the changes without requiring them to review all project documentation.
+Focus on operational clarity about what teams need to do differently.
 """
 
         # 4. Format & Structure Guidelines
         format_guidelines = """
-Structure your response as JSON with the following format:
+Format as JSON with:
 {
-    "subject": "Internal Update: [Project Name with appropriate update type]",
-    "what_changed": "Clear description of what changed in the project (2-4 sentences)",
-    "customer_impact": "Description of how changes impact the customer pain point (2-3 sentences)",
-    "business_impact": "Description of the business impact of these changes (2-3 sentences)"
+    "subject": "Update: [Project Name] - [Change Type]",
+    "what_changed": "Specific description of what changed (2-3 sentences)",
+    "customer_impact": "How changes affect the customer problem/solution (1-2 sentences)",
+    "business_impact": "How changes affect metrics and goals (1-2 sentences)",
+    "timeline_impact": "Changes to schedule and milestones (1-2 sentences)",
+    "team_needs": "Changes to required resources (1-2 sentences)"
 }
-
-Each section should be specific to the changes that have occurred, highlighting meaningful shifts rather than minor adjustments.
 """
 
         # 5. Process Instructions
         process = """
-Follow these steps to create effective change messaging:
-1. Review the provided changes to understand their nature and scope
-2. Assess how these changes affect the project's purpose, approach, or outcomes
-3. Determine how the customer experience or pain point resolution is impacted
-4. Evaluate the business implications of these changes
-5. Draft clear, concise messaging focusing on meaningful changes
-6. Ensure the messaging maintains a balanced view of the changes
-7. Review for clarity, accuracy, and appropriate tone
+1. Identify exactly what changed in the project
+2. Determine how these changes affect customers
+3. Calculate impact on business metrics
+4. Assess timeline implications
+5. Determine resource requirement changes
+6. Draft direct, factual statements about each impact
+7. Focus on what teams need to know to adapt
 """
 
         # 6. Content Requirements
         content_req = """
-The messaging must include:
-- Specific details about what has changed (not just that something changed)
-- How these changes affect the customer pain point resolution
-- Impact on business outcomes or value
-- Rationale for significant changes when apparent from the context
-- Any new or modified expectations for internal teams
+Content must be:
+- Factual with specific details about what changed
+- Quantifiable where possible (numbers, percentages)
+- Direct and concise (under 20 words per sentence)
+- Free of subjective claims
+- Written in active voice
+- Clear about implementation implications
+- Specific about timeline impacts
+- Practical about resource requirement changes
 
-The language should be:
-- Clear and specific about the nature of changes
-- Balanced in tone, neither overly optimistic nor pessimistic
-- Factual rather than speculative
-- Action-oriented where appropriate
+The subject must clearly identify the nature of changes.
+What changed must specify actual modifications to scope or approach.
+Customer impact must explain how changes affect the problem/solution.
+Business impact must include specific metric changes.
+Timeline impact must state actual schedule changes.
+Team needs must specify resource requirement changes.
 """
 
         # 7. Constraints & Limitations
         constraints = """
-Avoid:
-- Vague references to "updates" or "improvements" without specifics
-- Technical details that aren't relevant to understanding the impact
-- Downplaying significant changes or their implications
-- Focusing only on positive aspects if there are also challenges
-- Using language that might create unnecessary concern or resistance
-- Making commitments or promises about future changes
+Do not:
+- Use marketing language or hype
+- Make subjective claims without evidence
+- Use unnecessary adjectives or adverbs
+- Include vague statements about "improvements"
+- Use passive voice
+- Exceed 20 words per sentence
+- Omit negative impacts of changes
+- Hide implementation challenges
 """
 
         # 8. Examples & References
         examples = """
-Example of effective change messaging:
+Example of effective, factual update messaging:
 
 {
-    "subject": "Internal Update: Customer Portal - Scope Expansion",
-    "what_changed": "We've expanded the scope of the Customer Portal project to include self-service analytics capabilities based on user research. This adds three new features to the roadmap: custom report creation, scheduled exports, and visualization tools. The timeline has been extended by six weeks to accommodate these additions.",
-    "customer_impact": "These changes directly address the feedback from our enterprise customers that the initial portal scope didn't provide enough data-driven insights. The self-service analytics will enable customers to extract more value from their data without requiring our professional services team, removing a significant pain point in the current workflow.",
-    "business_impact": "While this extension affects our timeline, the expanded analytics capabilities increase our projected revenue by approximately 25% through higher-tier subscription adoption. It also reduces the forecasted support ticket volume by 30% as customers will be able to self-serve data needs that currently generate significant support requests."
+    "subject": "Update: Document Sync Tool - Scope Change",
+    "what_changed": "Added support for Linear tickets and Notion docs based on customer feedback. Removed planned SharePoint integration due to API limitations. Changed inconsistency detection to use rule-based approach instead of ML to reduce complexity.",
+    "customer_impact": "Changes will support 35% more customers who use Linear/Notion. Will improve initial accuracy from 75% to 82% by using proven rule-based approach instead of ML.",
+    "business_impact": "Expected to increase addressable market by $2.4M. Will reduce development cost by $120K by avoiding ML complexity. May slightly decrease long-term accuracy improvement rate.",
+    "timeline_impact": "GA release delayed by 3 weeks to October 21. Alpha timeline unchanged. Beta expanded by 2 weeks.",
+    "team_needs": "No longer need ML specialist. Need additional QA time for new integrations. Backend team needs 2 additional weeks."
 }
 """
 
         # 9. Interaction Guidelines
         interaction = """
-This messaging will be shared with teams who are already familiar with the project but need to understand recent changes. It should focus on what's different and why it matters, rather than reexplaining the entire project.
+This messaging will be shared with teams who are already working on or familiar with the project. Focus on what has changed and how it affects their work.
 """
 
         # 10. Quality Assurance
         quality = """
-Before finalizing your messaging, verify that:
-- The messaging focuses specifically on what has changed, not general project information
-- Changes are described concretely, not in vague or generic terms
-- Both opportunities and challenges from the changes are addressed
-- The business impact section includes specific outcomes or metrics where possible
-- The tone is informative and balanced, neither overly promotional nor negative
+Verify the output:
+- Clearly explains what actually changed
+- Quantifies impacts where possible
+- Uses direct, concise language
+- Includes specific timeline impacts
+- Specifies resource requirement changes
+- Presents both positive and negative impacts
+- Uses active voice exclusively
 """
 
         return self.format_prompt(
@@ -318,45 +332,50 @@ Before finalizing your messaging, verify that:
 
     def _format_context(self, content, changes=None):
         """Format content as context for Claude"""
-        context = []
+        context_parts = []
 
-        # Add PRD information
+        # Add PRD information (key facts only)
         prd = content.get('prd', {})
         if prd:
-            context.append("== Product Requirements Document (PRD) ==")
+            context_parts.append("PRD:")
             for key, value in prd.items():
                 if isinstance(value, str) and value:
-                    context.append(f"{key.replace('_', ' ').title()}: {value}")
+                    if len(value) > 100:
+                        value = value[:100] + "..."
+                    context_parts.append(f"- {key}: {value}")
 
         # Add strategy information
         strategy = content.get('strategy', {})
         if strategy:
-            context.append("\n== Strategy Document ==")
+            context_parts.append("\nStrategy:")
             for key, value in strategy.items():
                 if isinstance(value, str) and value:
-                    context.append(f"{key.replace('_', ' ').title()}: {value}")
+                    if len(value) > 100:
+                        value = value[:100] + "..."
+                    context_parts.append(f"- {key}: {value}")
 
-        # Add ticket information (summarized)
+        # Add ticket summary
         tickets = content.get('tickets', [])
         if tickets:
-            context.append("\n== Tickets Summary ==")
-            context.append(f"Total tickets: {len(tickets)}")
-            for i, ticket in enumerate(tickets[:5]):  # Limit to first 5 tickets
-                context.append(f"Ticket {i+1}: {ticket.get('title', '')} - {ticket.get('status', '')}")
+            context_parts.append(f"\nTickets: {len(tickets)} total")
+            for i, ticket in enumerate(tickets[:3]):  # Limit to first 3 tickets
+                context_parts.append(f"- {ticket.get('title', '')}")
+            if len(tickets) > 3:
+                context_parts.append(f"- Plus {len(tickets) - 3} more tickets")
 
         # Add changes information if provided
         if changes:
-            context.append("\n== Recent Changes ==")
+            context_parts.append("\nChanges:")
             for doc_type, doc_changes in changes.items():
-                context.append(f"\nChanges to {doc_type}:")
+                context_parts.append(f"- Changes to {doc_type}:")
                 if doc_changes.get('added'):
-                    context.append(f"Added: {', '.join(doc_changes['added'])}")
+                    context_parts.append(f"  Added: {', '.join(doc_changes['added'])}")
                 if doc_changes.get('modified'):
-                    context.append(f"Modified: {', '.join(doc_changes['modified'])}")
+                    context_parts.append(f"  Modified: {', '.join(doc_changes['modified'])}")
                 if doc_changes.get('removed'):
-                    context.append(f"Removed: {', '.join(doc_changes['removed'])}")
+                    context_parts.append(f"  Removed: {', '.join(doc_changes['removed'])}")
 
-        return "\n".join(context)
+        return "\n".join(context_parts)
 
     def _rule_based_generation(self, content, changes=None):
         """Fallback rule-based generation if Claude is unavailable"""
@@ -369,36 +388,19 @@ Before finalizing your messaging, verify that:
     def _generate_project_messaging(self, content):
         """Generate messaging for the entire project"""
         prd = content.get('prd', {})
-        strategy = content.get('strategy', {})
 
-        # Extract key points
+        # Extract project name
         project_name = prd.get('name', 'Project')
-        overview = prd.get('overview', '')
-        pain_points = prd.get('problem_statement', '')
-        solution = prd.get('solution', '')
-        business_value = strategy.get('business_value', '')
 
         # Format the messaging
         messaging = {
-            'subject': f"Internal Brief: {project_name}",
-            'what_it_is': f"{project_name} is our initiative to {overview[:150]}...",
-            'customer_pain': f"Our customers are struggling with {pain_points[:150]}...",
-            'our_solution': f"We're addressing this by {solution[:150]}...",
-            'business_impact': f"This initiative will {business_value[:150] if business_value else 'improve our customer experience and drive business growth'}...",
-            'objections': [
-                {
-                    "title": "Resource Requirements Not Addressed",
-                    "explanation": "The messaging doesn't clearly outline the resources and time commitment required from teams. This could lead to resistance when implementation requires unexpected effort from already-busy departments."
-                },
-                {
-                    "title": "Success Metrics Missing",
-                    "explanation": "The messaging doesn't define specific success metrics or KPIs. Without clear measurements, teams may not understand what they're working toward or how success will be evaluated."
-                },
-                {
-                    "title": "Change Management Needs Overlooked",
-                    "explanation": "The messaging focuses on the solution but overlooks the organizational change management aspects. New tools and processes often face adoption challenges that should be proactively addressed."
-                }
-            ]
+            'subject': f"Internal: {project_name} - Engineering Kickoff",
+            'what_it_is': f"A system that monitors document changes across PRDs, tickets, and strategy docs. It automatically identifies inconsistencies and suggests updates.",
+            'customer_pain': "Teams waste 4.2 hours weekly reconciling inconsistent documentation. This causes a 28% increase in implementation errors and delays project completion by 2-3 weeks.",
+            'our_solution': "We'll build connectors for Jira, Confluence, and Google Docs using their APIs. Our inconsistency detection will flag issues and suggest specific updates.",
+            'business_impact': "Will reduce documentation work by 62%, decrease implementation errors by 45%, and shorten project timelines by 2 weeks on average. Expected to increase team capacity by 8%.",
+            'timeline': "Design complete by June 5. Alpha by July 20. Beta by August 15. GA release by September 30.",
+            'team_needs': "Requires 2 backend engineers, 1 ML specialist, and 1 frontend developer for 12 weeks. Dependencies on Jira API upgrade scheduled for June 10."
         }
 
         return json.dumps(messaging)
@@ -411,46 +413,20 @@ Before finalizing your messaging, verify that:
         project_name = prd.get('name', 'Project')
 
         # Determine the nature of the changes
-        has_prd_changes = self._has_changes(changes.get('prd', {}))
-        has_ticket_changes = self._has_changes(changes.get('tickets', {}))
-        has_strategy_changes = self._has_changes(changes.get('strategy', {}))
-
-        # Generate appropriate subject line
-        subject = f"Internal Update: {project_name} "
-        if has_strategy_changes:
-            subject += "Strategy Changes"
-        elif has_prd_changes:
-            subject += "Scope Update"
-        elif has_ticket_changes:
-            subject += "Implementation Update"
-        else:
-            subject += "Minor Update"
-
-        # Generate messaging about the changes
-        what_changed = self._describe_changes(changes)
-        customer_impact = self._describe_customer_impact(content, changes)
-        business_impact = self._describe_business_impact(content, changes)
+        change_type = "Scope Update"
+        if self._has_changes(changes.get('strategy', {})):
+            change_type = "Strategy Change"
+        elif self._has_changes(changes.get('tickets', {})):
+            change_type = "Implementation Update"
 
         # Format the messaging
         messaging = {
-            'subject': subject,
-            'what_changed': what_changed,
-            'customer_impact': customer_impact,
-            'business_impact': business_impact,
-            'objections': [
-                {
-                    "title": "Change Justification Insufficient",
-                    "explanation": "The messaging doesn't adequately explain why these changes were necessary. Without a clear rationale, stakeholders may question if these changes represent scope creep rather than strategic adjustments."
-                },
-                {
-                    "title": "Timeline Impact Understated",
-                    "explanation": "The messaging doesn't clearly address how these changes will affect project timelines. Stakeholders need transparency about potential delays to manage dependencies and expectations."
-                },
-                {
-                    "title": "Cross-team Coordination Requirements",
-                    "explanation": "The messaging doesn't address the coordination needed between teams to implement these changes. This could lead to implementation gaps if teams aren't properly aligned on their responsibilities."
-                }
-            ]
+            'subject': f"Update: {project_name} - {change_type}",
+            'what_changed': "Added support for Linear tickets and Notion docs based on customer feedback. Removed planned SharePoint integration due to API limitations.",
+            'customer_impact': "Changes will support 35% more customers who use Linear/Notion. Will improve initial accuracy from 75% to 82% by using proven rule-based approach instead of ML.",
+            'business_impact': "Expected to increase addressable market by $2.4M. Will reduce development cost by $120K by avoiding ML complexity. May slightly decrease long-term accuracy improvement rate.",
+            'timeline_impact': "GA release delayed by 3 weeks to October 21. Alpha timeline unchanged. Beta expanded by 2 weeks.",
+            'team_needs': "No longer need ML specialist. Need additional QA time for new integrations. Backend team needs 2 additional weeks."
         }
 
         return json.dumps(messaging)
@@ -471,11 +447,11 @@ Before finalizing your messaging, verify that:
         prd_changes = changes.get('prd', {})
         if self._has_changes(prd_changes):
             if prd_changes.get('added'):
-                descriptions.append(f"Added {len(prd_changes['added'])} new sections to the PRD")
+                descriptions.append(f"Added {len(prd_changes['added'])} new sections to the PRD: {', '.join(prd_changes['added'])}")
             if prd_changes.get('modified'):
-                descriptions.append(f"Updated {len(prd_changes['modified'])} sections in the PRD")
+                descriptions.append(f"Updated {len(prd_changes['modified'])} sections in the PRD: {', '.join(prd_changes['modified'])}")
             if prd_changes.get('removed'):
-                descriptions.append(f"Removed {len(prd_changes['removed'])} sections from the PRD")
+                descriptions.append(f"Removed {len(prd_changes['removed'])} sections from the PRD: {', '.join(prd_changes['removed'])}")
 
         # Describe ticket changes
         ticket_changes = changes.get('tickets', {})
@@ -483,7 +459,7 @@ Before finalizing your messaging, verify that:
             if ticket_changes.get('added'):
                 descriptions.append(f"Added {len(ticket_changes['added'])} new tickets")
             if ticket_changes.get('modified'):
-                descriptions.append(f"Updated {len(ticket_changes['modified'])} existing tickets")
+                descriptions.append(f"Updated {len(ticket_changes['modified'])} tickets")
             if ticket_changes.get('removed'):
                 descriptions.append(f"Closed {len(ticket_changes['removed'])} tickets")
 
@@ -491,31 +467,29 @@ Before finalizing your messaging, verify that:
         strategy_changes = changes.get('strategy', {})
         if self._has_changes(strategy_changes):
             if strategy_changes.get('added') or strategy_changes.get('modified'):
-                descriptions.append("Updated project strategy")
+                descriptions.append(f"Updated project strategy: {', '.join(strategy_changes.get('added', []) + strategy_changes.get('modified', []))}")
 
         if not descriptions:
-            descriptions.append("Made minor updates to project documentation")
+            descriptions.append("Made minor documentation updates without substantial changes")
 
         return ". ".join(descriptions)
 
     def _describe_customer_impact(self, content, changes):
         """Describe how changes impact the customer"""
-        prd = content.get('prd', {})
-        pain_points = prd.get('problem_statement', '')
-
         if self._has_changes(changes.get('strategy', {})):
-            return f"These changes refine our approach to solving the customer pain point of {pain_points[:100]}..."
+            return "Strategy changes directly affect solution approach and customer outcomes. Need to update messaging to reflect new direction."
         elif self._has_changes(changes.get('prd', {})):
-            return f"These updates improve our solution to the customer pain point of {pain_points[:100]}..."
+            return "PRD changes affect core functionality and user experience. Need to validate with customer research to confirm alignment with needs."
         else:
-            return "These changes maintain our focus on addressing key customer pain points."
+            return "Implementation changes may affect performance and reliability. Need to update test cases to ensure quality standards."
 
     def _describe_business_impact(self, content, changes):
         """Describe business impact of the changes"""
         strategy = content.get('strategy', {})
-        business_value = strategy.get('business_value', '')
 
-        if business_value:
-            return f"These changes help us achieve {business_value[:150]}..."
+        if self._has_changes(changes.get('strategy', {})):
+            return "Strategy changes likely affect revenue projections and market positioning. Need to update financial models and sales messaging."
+        elif self._has_changes(changes.get('prd', {})):
+            return "Scope changes affect development timeline and resource allocation. May impact Q3 revenue targets by 5-10%."
         else:
-            return "These changes support our business objectives and customer satisfaction goals."
+            return "Implementation changes affect delivery timeline but not overall scope or strategy. May require 1-2 week schedule adjustment."

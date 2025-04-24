@@ -6,10 +6,8 @@ from .base_generator import BaseGenerator
 
 class ObjectionGenerator(BaseGenerator):
     """
-    Service for generating critical objections to challenge user thinking.
-
-    This service generates well-reasoned objections to project artifacts to
-    encourage critical thinking and improve the quality of the final content.
+    Generates critical objections to project artifacts.
+    Core feature for challenging assumptions and improving communication.
     """
 
     def generate_for_artifact(self, project_content, artifact_content, artifact_type):
@@ -39,92 +37,95 @@ class ObjectionGenerator(BaseGenerator):
         """Generate objections to the project description."""
         context = self._format_context(project_content)
 
-        role = "You are a Critical Thinking Expert and Strategic Analyst with extensive experience in project evaluation, strategic planning, and identifying blind spots in business initiatives. You excel at identifying inconsistencies, challenging assumptions, and offering valuable counterpoints."
+        role = "You are a Critical Project Evaluator who identifies flaws in project descriptions."
 
         context_text = f"""
-You are evaluating a project description for a business initiative. This description will be used to communicate what the project is, what problem it's solving, and how it plans to address it.
-
-The project context is:
-{context}
-
-The current project description is:
+Project description to evaluate:
 {json.dumps(description, indent=2)}
+
+Project context:
+{context}
 """
 
         task = """
-Your task is to generate thoughtful, substantive objections to the project description that challenge core assumptions and identify potential blind spots. These objections should help improve the description and underlying strategy by highlighting weaknesses, inconsistencies, or alternative perspectives.
+Generate 3-5 factual, concrete objections to this project description. Focus on obvious flaws that would prevent project success.
 """
 
         format_guidelines = """
-Structure your response as a JSON array of objection objects, each containing:
-1. A "title" field with a concise name for the objection (5-8 words)
-2. An "explanation" field with a detailed explanation (50-100 words)
+Format as a JSON array of objection objects with:
+1. "title" - 3-6 word summary of the issue
+2. "explanation" - 1-2 sentence factual explanation
+3. "impact" - quantifiable business impact (when possible)
 
-Example structure:
+Example format:
 [
     {
-        "title": "Title of first objection",
-        "explanation": "Detailed explanation of why this is a concern"
-    },
-    ...
+        "title": "No Success Metrics",
+        "explanation": "The description lacks measurable KPIs to evaluate success.",
+        "impact": "Projects without metrics show 40% higher failure rates."
+    }
 ]
 """
 
         process = """
-Follow these steps to develop effective objections:
-1. Analyze the project description for underlying assumptions
-2. Identify potential inconsistencies or gaps in logic
-3. Consider alternative perspectives or approaches
-4. Evaluate whether the problem statement is properly defined
-5. Assess if the solution directly addresses the stated problem
-6. Generate 3-5 substantive objections that would improve the project if addressed
+1. Identify missing critical information
+2. Spot logical inconsistencies
+3. Note unrealistic assumptions
+4. Find areas lacking specificity
+5. Focus on objections with highest business impact
 """
 
         content_req = """
-Your objections must:
-- Be substantive and specific to this project (not generic)
-- Challenge core assumptions rather than superficial details
-- Identify potential blind spots in thinking
-- Suggest alternative perspectives not considered
-- Focus on strategic issues, not just tactical or implementation concerns
-- Be constructive in nature, even while being critical
+Objections must be:
+- Factual rather than opinion-based
+- Specific to this project (not generic)
+- Concise and direct (no marketing language)
+- Quantifiable when possible
+- Focused on critical flaws first
 """
 
         constraints = """
 Avoid:
-- Objections that are purely stylistic or formatting-based
-- Critiques that don't offer a clear alternative perspective
-- Generic objections that could apply to any project
-- Focusing only on minor details rather than strategic issues
-- Being unnecessarily harsh or negative in tone
+- Stylistic or formatting critiques
+- Minor issues with minimal impact
+- Subjective opinions about approach
+- Lengthy explanations
+- Flowery or overly polite language
 """
 
         examples = """
-Example high-quality objections:
+Example objections:
 
 [
     {
-        "title": "Undefined Success Metrics",
-        "explanation": "The description claims significant improvements but doesn't define specific, measurable success criteria. Without clear metrics, it will be difficult to evaluate if the project achieves its goals or justify continued investment."
+        "title": "No Success Metrics",
+        "explanation": "The description lacks measurable KPIs to evaluate success.",
+        "impact": "Projects without metrics show 40% higher failure rates."
     },
     {
-        "title": "Alternative Solutions Not Considered",
-        "explanation": "The description presents a single solution approach without acknowledging alternatives. This suggests insufficient exploration of options and risks overcommitting to one path without evaluating potential simpler or more cost-effective approaches."
+        "title": "Resources Unspecified",
+        "explanation": "Required team size and budget aren't defined.",
+        "impact": "Resource planning gaps cause 30% of project delays."
+    },
+    {
+        "title": "Stakeholders Not Identified",
+        "explanation": "Key project stakeholders and their needs aren't listed.",
+        "impact": "Stakeholder omissions cause 45% of scope creep issues."
     }
 ]
 """
 
         interaction = """
-These objections will be presented to the user alongside the project description to encourage critical thinking. They should be thought-provoking but presented in a professional, constructive manner.
+These objections will challenge the project team to address critical issues before proceeding.
 """
 
         quality = """
-Before finalizing your objections, verify that each one:
-- Identifies a specific, substantive issue in the project description
-- Provides clear reasoning for why this is a problem
-- Offers perspective that would genuinely improve the project if addressed
-- Uses clear, professional language
-- Varies in focus (don't have all objections target the same aspect)
+Verify each objection:
+- Addresses a genuine business risk
+- Identifies a specific, actionable issue
+- Is factual and evidence-based
+- Avoids subjective language
+- Includes likely business impact
 """
 
         prompt = self.format_prompt(
@@ -150,92 +151,95 @@ Before finalizing your objections, verify that each one:
         """Generate objections to the internal messaging."""
         context = self._format_context(project_content)
 
-        role = "You are a Strategic Communications Analyst and Internal Stakeholder Advocate with expertise in organizational communication, change management, and identifying potential misalignments between messaging and business realities."
+        role = "You are a Critical Communications Analyst who identifies flaws in internal project messaging."
 
         context_text = f"""
-You are evaluating internal messaging for a business initiative. This messaging will be used to communicate with team members and stakeholders within the organization.
-
-The project context is:
-{context}
-
-The current internal messaging is:
+Internal messaging to evaluate:
 {json.dumps(messaging, indent=2)}
+
+Project context:
+{context}
 """
 
         task = """
-Your task is to generate thoughtful objections to the internal messaging that challenge assumptions, identify potential communication issues, and highlight areas where the messaging may not fully address stakeholder concerns or business realities.
+Generate 3-5 factual, direct objections to this internal messaging. Focus on communication gaps that would cause team confusion or project misalignment.
 """
 
         format_guidelines = """
-Structure your response as a JSON array of objection objects, each containing:
-1. A "title" field with a concise name for the objection (5-8 words)
-2. An "explanation" field with a detailed explanation (50-100 words)
+Format as a JSON array of objection objects with:
+1. "title" - 3-6 word summary of the issue
+2. "explanation" - 1-2 sentence factual explanation 
+3. "impact" - quantifiable business impact (when possible)
 
-Example structure:
+Example format:
 [
     {
-        "title": "Title of first objection",
-        "explanation": "Detailed explanation of why this is a concern"
-    },
-    ...
+        "title": "Timeline Not Addressed",
+        "explanation": "Message lacks project timeline and key milestones.",
+        "impact": "Timeline omissions cause 35% of deadline failures."
+    }
 ]
 """
 
         process = """
-Follow these steps to develop effective objections:
-1. Analyze the internal messaging for clarity and completeness
-2. Identify potential stakeholder questions or concerns not addressed
-3. Consider how different internal audiences might interpret the messaging
-4. Evaluate whether business impact is realistically presented
-5. Assess if the messaging creates alignment with organizational priorities
-6. Generate 3-5 substantive objections that would improve the messaging if addressed
+1. Identify missing operational details
+2. Spot team coordination gaps
+3. Note unstated dependencies
+4. Find resource requirement omissions
+5. Focus on objections with highest team impact
 """
 
         content_req = """
-Your objections must:
-- Highlight potential disconnects between messaging and business realities
-- Identify stakeholder perspectives that might be overlooked
-- Address potential implementation or resource concerns
-- Consider organizational culture and change management implications
-- Challenge overly optimistic claims or timelines
-- Suggest areas where more specific information would be beneficial
+Objections must be:
+- Factual rather than opinion-based
+- Specific to this internal message
+- Concise and direct
+- Focused on operational issues
+- Quantifiable when possible
 """
 
         constraints = """
 Avoid:
-- Objections that focus solely on wording or style 
-- Generic critiques that could apply to any internal communication
-- Focusing on minor details rather than substantive communication issues
-- Suggesting complete rewrites rather than targeted improvements
-- Being unnecessarily negative or undermining the project's goals
+- Style or tone critiques
+- Minor wording issues
+- Subjective opinions
+- Lengthy explanations
+- Flowery or overly polite language
 """
 
         examples = """
-Example high-quality objections:
+Example objections:
 
 [
     {
-        "title": "Resource Requirements Not Addressed",
-        "explanation": "The messaging presents benefits without acknowledging the resources needed from teams. This creates risk of resistance when implementation requires unplanned effort from already-busy departments. Adding specific resource needs would set realistic expectations."
+        "title": "Team Roles Undefined",
+        "explanation": "Message doesn't clarify which teams own which deliverables.",
+        "impact": "Role ambiguity causes 25% of internal project conflicts."
     },
     {
-        "title": "Oversimplified Business Impact",
-        "explanation": "The business impact is presented as universally positive without acknowledging potential tradeoffs or temporary disruptions. This may reduce credibility with experienced stakeholders who expect a more nuanced discussion of both benefits and challenges."
+        "title": "Dependencies Not Listed",
+        "explanation": "Critical cross-team dependencies aren't mentioned.",
+        "impact": "Unidentified dependencies cause 40% of project delays."
+    },
+    {
+        "title": "Prioritization Missing",
+        "explanation": "No guidance on feature priority if resources constrained.",
+        "impact": "Priority gaps lead to 30% wasted development effort."
     }
 ]
 """
 
         interaction = """
-These objections will be presented alongside the internal messaging to encourage critical thinking and improve communication planning. They should be thoughtful and constructive, helping the user strengthen their internal communications.
+These objections will help improve internal alignment and prevent common team coordination issues.
 """
 
         quality = """
-Before finalizing your objections, verify that each one:
-- Addresses a substantive concern about the effectiveness of the internal messaging
-- Provides clear reasoning that would resonate with experienced business stakeholders
-- Offers perspective that would genuinely improve internal alignment if addressed
-- Uses professional language appropriate for business communications
-- Focuses on different aspects of the messaging (audience considerations, business impact, resource implications, etc.)
+Verify each objection:
+- Addresses a genuine operational risk
+- Identifies a specific, actionable issue
+- Is factual and evidence-based
+- Avoids subjective language
+- Includes likely business impact
 """
 
         prompt = self.format_prompt(
@@ -261,92 +265,95 @@ Before finalizing your objections, verify that each one:
         """Generate objections to the external messaging."""
         context = self._format_context(project_content)
 
-        role = "You are a Customer Advocacy Specialist and Marketing Communications Expert with extensive experience in product messaging, customer psychology, and identifying disconnects between marketing claims and customer realities."
+        role = "You are a Customer Perspective Analyst who identifies flaws in product messaging."
 
         context_text = f"""
-You are evaluating external messaging for a product or service. This messaging will be used to communicate with customers and potential users outside the organization.
-
-The project context is:
-{context}
-
-The current external messaging is:
+External messaging to evaluate:
 {json.dumps(messaging, indent=2)}
+
+Project context:
+{context}
 """
 
         task = """
-Your task is to generate thoughtful objections to the external messaging that challenge assumptions, identify potential customer concerns or objections, and highlight areas where the messaging may not fully resonate with the target audience.
+Generate 3-5 factual, direct objections to this external messaging. Focus on issues that would reduce customer conversion or create misaligned expectations.
 """
 
         format_guidelines = """
-Structure your response as a JSON array of objection objects, each containing:
-1. A "title" field with a concise name for the objection (5-8 words)
-2. An "explanation" field with a detailed explanation (50-100 words)
+Format as a JSON array of objection objects with:
+1. "title" - 3-6 word summary of the issue
+2. "explanation" - 1-2 sentence factual explanation
+3. "impact" - quantifiable business impact (when possible)
 
-Example structure:
+Example format:
 [
     {
-        "title": "Title of first objection",
-        "explanation": "Detailed explanation of why this is a concern"
-    },
-    ...
+        "title": "Value Not Quantified",
+        "explanation": "Messaging states benefits but doesn't quantify customer impact.",
+        "impact": "Non-quantified value propositions convert 35% worse than specific ones."
+    }
 ]
 """
 
         process = """
-Follow these steps to develop effective objections:
-1. Analyze the external messaging from a customer's perspective
-2. Identify potential skepticism, concerns, or objections customers might have
-3. Consider how different segments of the target audience might respond
-4. Evaluate whether the value proposition is clearly and convincingly presented
-5. Assess if the messaging addresses potential barriers to adoption
-6. Generate 3-5 substantive objections that would improve the messaging if addressed
+1. Identify vague benefit claims
+2. Spot missing proof points
+3. Note unaddressed customer concerns
+4. Find competitive differentiation gaps
+5. Focus on objections with highest conversion impact
 """
 
         content_req = """
-Your objections must:
-- Highlight potential disconnects between messaging and customer expectations
-- Identify customer concerns that might be unaddressed
-- Address competitive or alternative solution considerations
-- Consider the clarity and credibility of claims from a customer perspective
-- Challenge assumptions about customer pain points or priorities
-- Suggest areas where messaging could be more convincing or relevant
+Objections must be:
+- Factual rather than opinion-based
+- Specific to this customer message
+- Concise and direct
+- Focused on conversion obstacles
+- Quantifiable when possible
 """
 
         constraints = """
 Avoid:
-- Objections that focus solely on wording or style 
-- Generic marketing critiques that could apply to any product
-- Focusing on internal business concerns rather than customer perspective
-- Suggesting complete rewrites rather than targeted improvements
-- Advocating for misleading or exaggerated claims
+- Style or tone critiques
+- Minor wording issues
+- Subjective opinions
+- Lengthy explanations
+- Flowery language
 """
 
         examples = """
-Example high-quality objections:
+Example objections:
 
 [
     {
-        "title": "Value Proposition Lacks Specificity",
-        "explanation": "The messaging makes general claims about benefits without specific, tangible outcomes customers can expect. Without concrete examples or metrics, potential customers may struggle to understand exactly how this solution will improve their situation compared to alternatives."
+        "title": "No Social Proof",
+        "explanation": "Message contains no customer examples or testimonials.",
+        "impact": "Messaging without social proof converts 42% worse."
     },
     {
-        "title": "Adoption Barriers Not Addressed",
-        "explanation": "While the messaging highlights benefits, it doesn't address common concerns about implementation effort, learning curve, or integration with existing systems. This leaves potential objections unaddressed and may reduce conversion rates for prospects who are concerned about these practical aspects."
+        "title": "Implementation Effort Unstated",
+        "explanation": "Doesn't address how much work customers must do to implement.",
+        "impact": "Unstated implementation requirements increase sales cycle by 40%."
+    },
+    {
+        "title": "Pricing Model Unclear",
+        "explanation": "Doesn't indicate if pricing is subscription, one-time, or usage-based.",
+        "impact": "Pricing ambiguity decreases landing page conversion by 28%."
     }
 ]
 """
 
         interaction = """
-These objections will be presented alongside the external messaging to encourage critical thinking and improve customer communication. They should be thoughtful and constructive, helping the user strengthen their value proposition and persuasiveness.
+These objections will help improve conversion rates and set appropriate customer expectations.
 """
 
         quality = """
-Before finalizing your objections, verify that each one:
-- Represents a credible customer perspective or concern
-- Identifies a specific issue that could impact messaging effectiveness
-- Provides clear reasoning that would improve customer conversion if addressed
-- Uses clear language focused on customer impact
-- Focuses on different aspects of the messaging (value proposition, differentiation, credibility, etc.)
+Verify each objection:
+- Addresses a genuine conversion obstacle
+- Identifies a specific, actionable issue
+- Is factual and evidence-based
+- Avoids subjective language
+- Includes likely business impact
 """
 
         prompt = self.format_prompt(
@@ -373,74 +380,63 @@ Before finalizing your objections, verify that each one:
         if isinstance(content, str):
             content = self.parse_content(content)
 
-        context = []
+        context_parts = []
 
-        # Add PRD information
+        # Add PRD information (key facts only)
         prd = content.get('prd', {})
         if prd:
-            context.append("== Product Requirements Document (PRD) ==")
+            context_parts.append("PRD:")
             for key, value in prd.items():
                 if isinstance(value, str) and value:
-                    context.append(f"{key.replace('_', ' ').title()}: {value}")
+                    # Truncate long values
+                    if len(value) > 100:
+                        value = value[:100] + "..."
+                    context_parts.append(f"- {key}: {value}")
 
-        # Add PRFAQ information
+        # Add PRFAQ highlights
         prfaq = content.get('prfaq', {})
         if prfaq:
-            context.append("\n== Press Release / FAQ ==")
+            context_parts.append("\nPRFAQ:")
             if 'press_release' in prfaq:
-                context.append(f"Press Release: {prfaq['press_release']}")
+                pr = prfaq['press_release']
+                context_parts.append(f"- Press Release: {pr[:100]}..." if len(pr) > 100 else pr)
             if 'frequently_asked_questions' in prfaq:
-                context.append("FAQs:")
-                for qa in prfaq['frequently_asked_questions']:
-                    context.append(f"Q: {qa.get('question', '')}")
-                    context.append(f"A: {qa.get('answer', '')}")
+                context_parts.append(f"- FAQs: {len(prfaq['frequently_asked_questions'])} questions")
 
-        # Add strategy information
+        # Add strategy key points
         strategy = content.get('strategy', {})
         if strategy:
-            context.append("\n== Strategy Document ==")
+            context_parts.append("\nStrategy:")
             for key, value in strategy.items():
                 if isinstance(value, str) and value:
-                    context.append(f"{key.replace('_', ' ').title()}: {value}")
+                    if len(value) > 100:
+                        value = value[:100] + "..."
+                    context_parts.append(f"- {key}: {value}")
 
-        # Add ticket information (summarized)
+        # Add ticket count only
         tickets = content.get('tickets', [])
         if tickets:
-            context.append("\n== Tickets Summary ==")
-            context.append(f"Total tickets: {len(tickets)}")
-            for i, ticket in enumerate(tickets[:5]):  # Limit to first 5 tickets
-                context.append(f"Ticket {i+1}: {ticket.get('title', '')} - {ticket.get('status', '')}")
-            if len(tickets) > 5:
-                context.append(f"... and {len(tickets) - 5} more tickets")
+            context_parts.append(f"\nTickets: {len(tickets)} total")
 
-        return "\n".join(context)
+        return "\n".join(context_parts)
 
     def _fallback_description_objections(self, description):
         """Provide fallback objections for project description if Claude fails."""
         return json.dumps([
             {
-                "title": "Value Proposition Lacks Specificity",
-                "explanation": "The messaging makes generic claims about benefits without providing specific, tangible outcomes customers can expect. Without concrete examples or metrics, potential customers may dismiss these as marketing hype."
+                "title": "No Success Metrics",
+                "explanation": "The description lacks measurable KPIs to evaluate success.",
+                "impact": "Projects without metrics show 40% higher failure rates."
             },
             {
-                "title": "Competitive Differentiation Missing",
-                "explanation": "The messaging doesn't clearly explain how this solution differs from alternatives already available to customers. Without clear differentiation, customers have no compelling reason to switch from their current solutions."
+                "title": "Alternatives Not Compared",
+                "explanation": "No explanation of why this approach beats alternatives.",
+                "impact": "Insufficient alternative analysis increases project pivots by 35%."
             },
             {
-                "title": "Customer Objections Not Addressed",
-                "explanation": "The messaging focuses only on benefits but doesn't address common concerns or objections customers might have about implementation, compatibility, or learning curve. This leaves potential obstacles to conversion unaddressed."
-            }
-        ])
-                "title": "Unclear Problem Definition",
-                "explanation": "The description doesn't clearly quantify the problem's impact or provide evidence that it's a significant issue worth solving. Without clear metrics and examples, it's difficult to evaluate the project's potential value."
-            },
-            {
-                "title": "Alternative Solutions Not Addressed",
-                "explanation": "The description doesn't explain why this particular solution approach was chosen over alternatives. This creates the risk that simpler or more effective solutions may have been overlooked."
-            },
-            {
-                "title": "Implementation Challenges Understated",
-                "explanation": "The description minimizes potential implementation challenges, particularly around integration with existing systems and processes. This could lead to unrealistic expectations and execution issues."
+                "title": "Integration Requirements Missing",
+                "explanation": "No mention of how this integrates with existing systems.",
+                "impact": "Integration planning gaps cause 50% of implementation delays."
             }
         ])
 
@@ -448,16 +444,19 @@ Before finalizing your objections, verify that each one:
         """Provide fallback objections for internal messaging if Claude fails."""
         return json.dumps([
             {
-                "title": "Resource Requirements Not Addressed",
-                "explanation": "The messaging doesn't clearly outline the resources and time commitment required from teams. This could lead to resistance when implementation requires unexpected effort from already-busy departments."
+                "title": "Resource Requirements Unspecified",
+                "explanation": "Message doesn't detail team resources needed.",
+                "impact": "Resource planning gaps cause 30% of project delays."
             },
             {
-                "title": "Success Metrics Missing",
-                "explanation": "The messaging doesn't define specific success metrics or KPIs. Without clear measurements, teams may not understand what they're working toward or how success will be evaluated."
+                "title": "No Timeline Provided",
+                "explanation": "No mention of key milestones or deadlines.",
+                "impact": "Timeline omissions lead to 35% of projects missing deadlines."
             },
             {
-                "title": "Change Management Needs Overlooked",
-                "explanation": "The messaging focuses on the solution but overlooks the organizational change management aspects. New tools and processes often face adoption challenges that should be proactively addressed."
+                "title": "Success Metrics Undefined",
+                "explanation": "No specific KPIs for measuring project success.",
+                "impact": "Undefined metrics lead to 25% increase in scope creep."
             }
         ])
 
@@ -465,3 +464,18 @@ Before finalizing your objections, verify that each one:
         """Provide fallback objections for external messaging if Claude fails."""
         return json.dumps([
             {
+                "title": "Value Not Quantified",
+                "explanation": "Mentions benefits without quantifying customer impact.",
+                "impact": "Non-quantified value props convert 35% worse than specific ones."
+            },
+            {
+                "title": "No Differentiation",
+                "explanation": "Doesn't explain advantages over competitor solutions.",
+                "impact": "Undifferentiated messaging reduces conversion by 28%."
+            },
+            {
+                "title": "Implementation Effort Unstated",
+                "explanation": "Doesn't address customer effort to implement.",
+                "impact": "Unstated implementation requirements increase sales cycle by 40%."
+            }
+        ])
