@@ -1,144 +1,105 @@
 # Project Alignment Tool
 
-A lightweight tool that keeps project documentation in sync and ensures alignment across all project artifacts.
+## Overview
 
-## Purpose
+Project Alignment Tool is an intelligent application that solves one of the most persistent challenges in software development - keeping project documentation synchronized and ensuring alignment across all project artifacts. When PRDs, tickets, strategy documents, and other project materials get out of sync, teams struggle with miscommunication, wasted effort, and implementation errors.
 
-The Project Alignment Tool serves two core functions:
+This tool monitors changes across all connected project documents and automatically suggests updates to maintain alignment. When a ticket is added, it recommends how the PRD should be updated. When the PRD changes, it suggests what tickets should be created or modified. The system acts as a bridge between what has been written and what has been done, ensuring everyone stays on the same page.
 
-1. **Documentation Synchronization**: Connects all project documentation (PRD, PRFAQ, strategy, tickets) and keeps everything updated when changes occur. When one document changes, it suggests updates to keep other documents aligned.
+## Pain Points Addressed
 
-2. **Project Clarity**: Automatically generates three key artifacts:
-   - **Project Description**: A concise 3-sentence and 3-paragraph explanation of what the project is, the customer pain point it's solving, and how it's being addressed.
-   - **Internal Messaging**: Clear communication for internal teams about changes, their impact, and business value.
-   - **External Messaging**: Customer-focused messaging explaining the pain point being solved and how the solution addresses it.
+Development teams face numerous challenges when project documentation becomes inconsistent:
 
-## Key Features
+* Engineers implement features based on outdated PRDs, resulting in misaligned deliverables
+* Product managers update requirements without corresponding ticket updates, causing confusion
+* Strategy changes aren't reflected in implementation plans, leading to missed business objectives
+* Time is wasted in meetings to reconcile different versions of requirements
+* Lack of clear messaging about what changes were made and why, both internally and externally
 
-- **Bidirectional Change Tracking**: Detects changes in any connected document and suggests updates to keep everything aligned.
-- **Artifact Generation**: Automatically creates and updates project descriptions and messaging.
-- **Impact Analysis**: Evaluates if changes maintain project focus or indicate scope drift.
-- **Minimal UI**: Simple, text-focused interface that prioritizes content and insights.
+These problems compound in larger organizations or complex projects where many stakeholders create and consume documentation across different tools and formats.
 
-## Setup Instructions
+## Solution
+
+Project Alignment Tool addresses these challenges by:
+
+1. **Connecting documentation across tools**: Integrates with Google Docs (for PRDs/PRFAQs), Jira (for tickets), and Confluence (for strategy documents)
+2. **Detecting meaningful changes**: Uses intelligent analysis to identify when sections, requirements, or tickets are added, modified, or removed
+3. **Suggesting alignment updates**: Provides specific, actionable recommendations to keep documentation in sync
+4. **Generating communication artifacts**: Automatically creates and maintains:
+   - Project descriptions (what it is, pain points addressed, solution approach)
+   - Internal messaging (for team communication)
+   - External messaging (for customer communication)
+5. **Analyzing change impact**: Evaluates if changes maintain project focus or indicate scope drift
+
+The application features a minimalist, text-focused interface that prioritizes content and insights over complex UI elements.
+
+## Key Benefits
+
+Using Project Alignment Tool provides significant advantages for development teams:
+
+* **Reduced miscommunication**: Everyone works from the same, up-to-date information
+* **Time savings**: Eliminate hours spent reconciling different versions of documents
+* **Improved quality**: Fewer implementation errors due to documentation inconsistencies
+* **Better stakeholder alignment**: Clear, consistent messaging about the project and changes
+* **Focus maintenance**: Early detection of scope creep or project drift
+* **Streamlined communication**: Automatically generated artifacts for different audiences
+
+## Technical Architecture
+
+The application is built with a clean, modular architecture:
+
+* Flask-based web application with SQLite database
+* Integration modules for Google Docs, Jira, and Confluence
+* Core services for synchronization, alignment analysis, and artifact generation
+* Minimal UI with light background and dark text for readability
+
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.7+
-- Flask
-- SQLAlchemy
-- Access to external services (Google Docs, Jira, Linear, Confluence)
+* Python 3.7+
+* Flask and SQLAlchemy
+* Access to Google Docs, Jira, and/or Confluence
 
 ### Installation
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/project-alignment-tool.git
-   cd project-alignment-tool
-   ```
+1. Clone the repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Set up environment variables for API access
+4. Run the application: `python main.py`
 
-2. Create a virtual environment:
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### Basic Usage
 
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+1. Connect your project documents (PRDs, tickets, strategy)
+2. The system will analyze them for initial alignment
+3. As documents change, review suggested updates
+4. Use the generated artifacts for team and customer communication
 
-4. Configure environment variables:
-   - Create a `.env` file with the following variables:
-     ```
-     FLASK_APP=main.py
-     FLASK_ENV=development
+## Example Scenario
 
-     # For Google Docs integration
-     GOOGLE_CLIENT_ID=your_client_id
-     GOOGLE_CLIENT_SECRET=your_client_secret
+A product team is building a new feature. The product manager updates the PRD to modify the requirements. Project Alignment Tool:
 
-     # For Jira integration
-     JIRA_API_KEY=your_jira_api_key
-     JIRA_EMAIL=your_jira_email
-     JIRA_DOMAIN=your_jira_domain
+1. Detects the changes in the PRD
+2. Analyzes what tickets need to be updated
+3. Suggests specific ticket changes to the engineering team
+4. Generates updated internal messaging explaining the change rationale
+5. Creates external messaging highlighting customer benefits of the change
+6. Evaluates if the change maintains the project's original focus
 
-     # For Linear integration
-     LINEAR_API_KEY=your_linear_api_key
+This ensures the entire team understands what changed, why it changed, and what needs to be done to maintain alignment.
 
-     # For Confluence integration
-     CONFLUENCE_API_TOKEN=your_confluence_api_token
-     CONFLUENCE_EMAIL=your_confluence_email
-     CONFLUENCE_DOMAIN=your_confluence_domain
-     ```
+## Future Roadmap
 
-5. Initialize the database:
-   ```
-   flask db init
-   flask db migrate
-   flask db upgrade
-   ```
+* Enhanced AI-powered suggestion engine
+* Additional integrations (GitHub, Notion, Asana)
+* Automated ticket creation/updates
+* Real-time collaborative alignment resolution
+* Custom artifact templates
 
-6. Run the application:
-   ```
-   python main.py
-   ```
+## Contributing
 
-### Connecting Documents
-
-1. Visit the setup page at `/setup`
-2. Authenticate with Google to connect Google Docs
-3. Connect your project documentation:
-   - PRD (Google Doc)
-   - PRFAQ (Google Doc)
-   - Strategy (Google Doc or Confluence)
-   - Tickets (Jira or Linear)
-
-### Webhooks Configuration
-
-To enable real-time updates, configure webhooks in your connected services to point to:
-
-- Jira: `http://your-domain.com/webhook`
-- Linear: `http://your-domain.com/webhook`
-- Google Docs: Configure the Google Drive API push notifications
-- Confluence: Configure webhooks in Confluence admin
-
-## Project Structure
-
-```
-app/
-├── __init__.py
-├── config.py
-├── models/
-│   ├── __init__.py
-│   ├── version.py
-│   ├── project.py
-│   └── alignment.py
-├── integrations/
-│   ├── __init__.py
-│   ├── google_docs.py
-│   ├── jira.py
-│   ├── linear.py
-│   └── confluence.py
-├── services/
-│   ├── __init__.py
-│   ├── sync_service.py
-│   ├── alignment_service.py
-│   ├── change_impact_analyzer.py
-│   └── artifacts/
-│       ├── __init__.py
-│       ├── project_description.py
-│       ├── internal_messaging.py
-│       └── external_messaging.py
-└── main.py
-```
-
-## Development Notes
-
-- This project is designed to be lightweight and focused on alignment
-- The UI is intentionally minimal to emphasize content
-- Integration stubs need to be implemented with actual API calls
+Contributions are welcome! See our contributing guidelines for details.
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the MIT License - see the LICENSE file for details.

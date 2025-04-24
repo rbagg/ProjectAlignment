@@ -1,5 +1,7 @@
-flask==2.2.3
+flask==2.2.5
+werkzeug==2.2.3
 flask-sqlalchemy==3.0.3
 flask-limiter==3.3.0
-anthropic==0.5.0
+anthropic==0.8.1
 python-dotenv==1.0.0
+requests==2.31.0

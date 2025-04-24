@@ -1,8 +1,3 @@
-# models/__init__.py
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
-
 # models/version.py
 from . import db
 from datetime import datetime
