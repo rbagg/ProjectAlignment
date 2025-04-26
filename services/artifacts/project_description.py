@@ -5,6 +5,7 @@ from models import Project
 from flask import current_app
 from .base_generator import BaseGenerator
 from .objection_generator import ObjectionGenerator
+from .improvement_generator import ImprovementGenerator
 
 class ProjectDescriptionGenerator(BaseGenerator):
     """
@@ -13,9 +14,10 @@ class ProjectDescriptionGenerator(BaseGenerator):
     """
 
     def __init__(self):
-        """Initialize the generator with a logger and objection generator."""
+        """Initialize the generator with a logger, objection generator, and improvement generator."""
         super().__init__()
         self.objection_generator = ObjectionGenerator()
+        self.improvement_generator = ImprovementGenerator()
 
     def get_latest(self):
         """Get the latest generated project description"""
@@ -26,6 +28,10 @@ class ProjectDescriptionGenerator(BaseGenerator):
             # Add objections if available
             if project.description_objections:
                 result['objections'] = project.get_description_objections_list()
+
+            # Add improvements if available
+            if project.description_improvements:
+                result['improvements'] = project.get_description_improvements_list()
 
             return result
         return None
@@ -38,7 +44,7 @@ class ProjectDescriptionGenerator(BaseGenerator):
             project_content (str): JSON string of project content
 
         Returns:
-            str: JSON string with descriptions and objections
+            str: JSON string with descriptions, objections, and improvements
         """
         content = self.parse_content(project_content)
 
@@ -62,8 +68,13 @@ class ProjectDescriptionGenerator(BaseGenerator):
         objections_json = self.objection_generator.generate_for_artifact(
             content, description, 'description')
 
-        # Combine description and objections
+        # Generate improvements for the description
+        improvements_json = self.improvement_generator.generate_for_artifact(
+            content, description, 'description')
+
+        # Combine description, objections, and improvements
         description['objections'] = self.parse_content(objections_json)
+        description['improvements'] = self.parse_content(improvements_json)
 
         return json.dumps(description)
 
@@ -284,10 +295,30 @@ Verify each output:
             f"{project_name} solves this by creating bidirectional links between documents. When changes occur, it flags inconsistencies and suggests updates. The system also generates standardized artifacts and identifies potential issues."
         ]
 
+        # Generate fallback improvements
+        improvements = [
+            {
+                "title": "Add Success Metrics",
+                "suggestion": "Define 3-5 specific KPIs that will measure project success (e.g., 40% reduction in document sync time).",
+                "benefit": "Projects with defined metrics are 35% more likely to deliver expected business value."
+            },
+            {
+                "title": "Sharpen Scope Boundaries",
+                "suggestion": "Explicitly list what's NOT included in the project to prevent scope creep (e.g., 'Will not include SharePoint integration').",
+                "benefit": "Clear scope boundaries reduce feature creep by 42% and prevent 30% of project delays."
+            },
+            {
+                "title": "Specify Implementation Phases",
+                "suggestion": "Break implementation into 3 concrete phases with specific deliverables for each milestone.",
+                "benefit": "Phased implementation approaches reduce project risk by 38% and improve stakeholder alignment."
+            }
+        ]
+
         # Format the result
         result = {
             'three_sentences': three_sentences,
-            'three_paragraphs': three_paragraphs
+            'three_paragraphs': three_paragraphs,
+            'improvements': improvements
         }
 
         return json.dumps(result)

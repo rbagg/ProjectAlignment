@@ -8,7 +8,7 @@ class Project(db.Model):
     Project model for storing project content and generated artifacts.
 
     This model represents a snapshot of a project at a specific point in time,
-    including its content and generated artifacts like descriptions and messaging.
+    including its content, generated artifacts, objections, and improvements.
     """
     __tablename__ = 'projects'
 
@@ -17,9 +17,17 @@ class Project(db.Model):
     description = db.Column(db.Text, nullable=True)  # Generated project description
     internal_messaging = db.Column(db.Text, nullable=True)  # Generated internal messaging
     external_messaging = db.Column(db.Text, nullable=True)  # Generated external messaging
+
+    # Objections to artifacts
     description_objections = db.Column(db.Text, nullable=True)  # Objections to project description
     internal_objections = db.Column(db.Text, nullable=True)  # Objections to internal messaging
     external_objections = db.Column(db.Text, nullable=True)  # Objections to external messaging
+
+    # Improvement suggestions for artifacts
+    description_improvements = db.Column(db.Text, nullable=True)  # Improvements for project description
+    internal_improvements = db.Column(db.Text, nullable=True)  # Improvements for internal messaging
+    external_improvements = db.Column(db.Text, nullable=True)  # Improvements for external messaging
+
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def get_content_dict(self):
@@ -69,6 +77,27 @@ class Project(db.Model):
         """Return external messaging objections as a list"""
         try:
             return json.loads(self.external_objections) if self.external_objections else []
+        except json.JSONDecodeError:
+            return []
+
+    def get_description_improvements_list(self):
+        """Return description improvements as a list"""
+        try:
+            return json.loads(self.description_improvements) if self.description_improvements else []
+        except json.JSONDecodeError:
+            return []
+
+    def get_internal_improvements_list(self):
+        """Return internal messaging improvements as a list"""
+        try:
+            return json.loads(self.internal_improvements) if self.internal_improvements else []
+        except json.JSONDecodeError:
+            return []
+
+    def get_external_improvements_list(self):
+        """Return external messaging improvements as a list"""
+        try:
+            return json.loads(self.external_improvements) if self.external_improvements else []
         except json.JSONDecodeError:
             return []
 

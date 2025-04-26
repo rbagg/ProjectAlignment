@@ -24,6 +24,7 @@ from services.artifacts.project_description import ProjectDescriptionGenerator
 from services.artifacts.internal_messaging import InternalMessagingGenerator
 from services.artifacts.external_messaging import ExternalMessagingGenerator
 from services.artifacts.objection_generator import ObjectionGenerator
+from services.artifacts.improvement_generator import ImprovementGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -60,6 +61,7 @@ project_description_generator = ProjectDescriptionGenerator()
 internal_messaging_generator = InternalMessagingGenerator()
 external_messaging_generator = ExternalMessagingGenerator()
 objection_generator = ObjectionGenerator()
+improvement_generator = ImprovementGenerator()
 
 @app.before_first_request
 def create_tables():
@@ -129,7 +131,7 @@ def connect_document():
         internal_msg = internal_messaging_generator.generate(project_content)
         external_msg = external_messaging_generator.generate(project_content)
 
-        # Parse generated artifacts to extract objections
+        # Parse generated artifacts to extract objections and improvements
         description_data = json.loads(description)
         internal_data = json.loads(internal_msg)
         external_data = json.loads(external_msg)
@@ -138,6 +140,11 @@ def connect_document():
         description_objections = json.dumps(description_data.get('objections', []))
         internal_objections = json.dumps(internal_data.get('objections', []))
         external_objections = json.dumps(external_data.get('objections', []))
+
+        # Extract improvements
+        description_improvements = json.dumps(description_data.get('improvements', []))
+        internal_improvements = json.dumps(internal_data.get('improvements', []))
+        external_improvements = json.dumps(external_data.get('improvements', []))
 
         # Save to project
         project = Project(
@@ -148,6 +155,9 @@ def connect_document():
             description_objections=description_objections,
             internal_objections=internal_objections,
             external_objections=external_objections,
+            description_improvements=description_improvements,
+            internal_improvements=internal_improvements,
+            external_improvements=external_improvements,
             timestamp=datetime.utcnow()
         )
         db.session.add(project)
@@ -155,3 +165,316 @@ def connect_document():
 
         flash('Document connected successfully!', 'success')
         return redirect(url_for('index'))
+
+    except Exception as e:
+        logger.error(f"Error connecting document: {str(e)}")
+        flash(f'Error connecting document: {str(e)}', 'error')
+        return redirect(url_for('setup'))
+
+@app.route('/update', methods=['POST'])
+@limiter.limit("10 per hour")
+def manual_update():
+    """Manually trigger an update and alignment check"""
+    try:
+        # Collect all content
+        project_content = sync_service.collect_all_content()
+
+        # Analyze changes
+        changes = alignment_service.analyze_changes(project_content)
+        impact = impact_analyzer.analyze(changes)
+
+        # Generate updated artifacts
+        description = project_description_generator.generate(project_content)
+        internal_msg = internal_messaging_generator.generate(project_content, changes)
+        external_msg = external_messaging_generator.generate(project_content, changes)
+
+        # Parse generated artifacts to extract objections and improvements
+        description_data = json.loads(description)
+        internal_data = json.loads(internal_msg)
+        external_data = json.loads(external_msg)
+
+        # Extract objections
+        description_objections = json.dumps(description_data.get('objections', []))
+        internal_objections = json.dumps(internal_data.get('objections', []))
+        external_objections = json.dumps(external_data.get('objections', []))
+
+        # Extract improvements
+        description_improvements = json.dumps(description_data.get('improvements', []))
+        internal_improvements = json.dumps(internal_data.get('improvements', []))
+        external_improvements = json.dumps(external_data.get('improvements', []))
+
+        # Save to project
+        project = Project(
+            content=project_content,
+            description=description,
+            internal_messaging=internal_msg,
+            external_messaging=external_msg,
+            description_objections=description_objections,
+            internal_objections=internal_objections,
+            external_objections=external_objections,
+            description_improvements=description_improvements,
+            internal_improvements=internal_improvements,
+            external_improvements=external_improvements,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(project)
+
+        # Save alignment suggestions
+        alignment = Alignment(
+            suggestions=alignment_service.format_suggestions(changes),
+            impact_analysis=impact,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(alignment)
+        db.session.commit()
+
+        flash('Project updated and aligned successfully!', 'success')
+        return redirect(url_for('index'))
+
+    except Exception as e:
+        logger.error(f"Error updating project: {str(e)}")
+        flash(f'Error updating project: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/webhook', methods=['POST'])
+@limiter.limit("100 per hour")
+def webhook():
+    """Handle updates from connected platforms"""
+    try:
+        data = request.json
+        source = data.get('source')
+
+        # Process the update based on source
+        if source == 'jira':
+            changes = sync_service.handle_jira_update(data)
+        elif source == 'google_docs':
+            changes = sync_service.handle_docs_update(data)
+        elif source == 'confluence':
+            changes = sync_service.handle_confluence_update(data)
+        elif source == 'linear':
+            changes = sync_service.handle_linear_update(data)
+        else:
+            return {'error': 'Unknown source'}, 400
+
+        # If changes were detected, analyze and generate artifacts
+        if changes:
+            # Get the latest project content
+            project_content = sync_service.collect_all_content()
+
+            # Analyze impact
+            impact = impact_analyzer.analyze(changes)
+
+            # Generate updated artifacts
+            description = project_description_generator.generate(project_content)
+            internal_msg = internal_messaging_generator.generate(project_content, changes)
+            external_msg = external_messaging_generator.generate(project_content, changes)
+
+            # Parse generated artifacts to extract objections and improvements
+            description_data = json.loads(description)
+            internal_data = json.loads(internal_msg)
+            external_data = json.loads(external_msg)
+
+            # Extract objections
+            description_objections = json.dumps(description_data.get('objections', []))
+            internal_objections = json.dumps(internal_data.get('objections', []))
+            external_objections = json.dumps(external_data.get('objections', []))
+
+            # Extract improvements
+            description_improvements = json.dumps(description_data.get('improvements', []))
+            internal_improvements = json.dumps(internal_data.get('improvements', []))
+            external_improvements = json.dumps(external_data.get('improvements', []))
+
+            # Save to project
+            project = Project(
+                content=project_content,
+                description=description,
+                internal_messaging=internal_msg,
+                external_messaging=external_msg,
+                description_objections=description_objections,
+                internal_objections=internal_objections,
+                external_objections=external_objections,
+                description_improvements=description_improvements,
+                internal_improvements=internal_improvements,
+                external_improvements=external_improvements,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(project)
+
+            # Save alignment suggestions
+            alignment = Alignment(
+                suggestions=alignment_service.format_suggestions(changes),
+                impact_analysis=impact,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(alignment)
+            db.session.commit()
+
+        return {'status': 'success', 'changes_detected': bool(changes)}, 200
+
+    except Exception as e:
+        logger.error(f"Webhook error: {str(e)}")
+        return {'error': str(e)}, 500
+
+# Test routes for artifact generation
+@app.route('/test', methods=['GET'])
+def test_form():
+    """Display test form for artifact generation"""
+    return render_template('test.html')
+
+@app.route('/test/generate', methods=['POST'])
+def test_generation():
+    """Test artifact generation with provided content"""
+    try:
+        # Get uploaded file or text input
+        content = ""
+        if 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            content = file.read().decode('utf-8')
+        elif request.form.get('content'):
+            content = request.form.get('content')
+        else:
+            flash('Please provide either a file or text content', 'error')
+            return redirect(url_for('test_form'))
+
+        # Create a mock project structure
+        mock_type = request.form.get('mock_type', 'prd')
+        project_content = {
+            'prd': {},
+            'prfaq': {},
+            'strategy': {},
+            'tickets': []
+        }
+
+        # Add content to the appropriate section
+        if mock_type == 'prd':
+            project_content['prd'] = {
+                'name': 'Test Project',
+                'overview': content,
+                'problem_statement': 'Extracted problem statement',
+                'solution': 'Extracted solution approach'
+            }
+        elif mock_type == 'prfaq':
+            project_content['prfaq'] = {
+                'press_release': content,
+                'frequently_asked_questions': [
+                    {'question': 'What problem does this solve?', 'answer': 'Extracted problem statement'}
+                ]
+            }
+        elif mock_type == 'strategy':
+            project_content['strategy'] = {
+                'vision': content,
+                'approach': 'Extracted strategic approach',
+                'business_value': 'Extracted business value'
+            }
+
+        # Generate artifacts
+        project_content_json = json.dumps(project_content)
+        description = project_description_generator.generate(project_content_json)
+        internal_msg = internal_messaging_generator.generate(project_content_json)
+        external_msg = external_messaging_generator.generate(project_content_json)
+
+        # Parse the results
+        description_data = json.loads(description)
+        internal_data = json.loads(internal_msg)
+        external_data = json.loads(external_msg)
+
+        # Return results
+        return render_template('test_results.html',
+                              content=content,
+                              description=description_data,
+                              internal=internal_data,
+                              external=external_data)
+
+    except Exception as e:
+        logger.error(f"Test generation error: {str(e)}")
+        flash(f'Error generating artifacts: {str(e)}', 'error')
+        return redirect(url_for('test_form'))
+
+@app.route('/api/suggestions', methods=['GET'])
+def api_suggestions():
+    """API endpoint to get latest suggestions"""
+    alignment = Alignment.query.order_by(Alignment.timestamp.desc()).first()
+    if alignment:
+        return jsonify({
+            'suggestions': json.loads(alignment.suggestions) if alignment.suggestions else [],
+            'impact': json.loads(alignment.impact_analysis) if alignment.impact_analysis else None,
+            'timestamp': alignment.timestamp
+        })
+    return jsonify({'suggestions': [], 'impact': None, 'timestamp': None})
+
+@app.route('/api/artifacts', methods=['GET'])
+def api_artifacts():
+    """API endpoint to get latest artifacts"""
+    project = Project.query.order_by(Project.timestamp.desc()).first()
+    if project:
+        description = project.get_description_dict()
+        internal = project.get_internal_messaging_dict()
+        external = project.get_external_messaging_dict()
+
+        # Add objections
+        if project.description_objections:
+            description['objections'] = project.get_description_objections_list()
+        if project.internal_objections:
+            internal['objections'] = project.get_internal_objections_list()
+        if project.external_objections:
+            external['objections'] = project.get_external_objections_list()
+
+        # Add improvements
+        if project.description_improvements:
+            description['improvements'] = project.get_description_improvements_list()
+        if project.internal_improvements:
+            internal['improvements'] = project.get_internal_improvements_list()
+        if project.external_improvements:
+            external['improvements'] = project.get_external_improvements_list()
+
+        return jsonify({
+            'description': description,
+            'internal_messaging': internal,
+            'external_messaging': external,
+            'timestamp': project.timestamp
+        })
+    return jsonify({
+        'description': None,
+        'internal_messaging': None,
+        'external_messaging': None,
+        'timestamp': None
+    })
+
+@app.route('/api/objections', methods=['GET'])
+def api_objections():
+    """API endpoint to get latest objections"""
+    project = Project.query.order_by(Project.timestamp.desc()).first()
+    if project:
+        return jsonify({
+            'description_objections': project.get_description_objections_list(),
+            'internal_objections': project.get_internal_objections_list(),
+            'external_objections': project.get_external_objections_list(),
+            'timestamp': project.timestamp
+        })
+    return jsonify({
+        'description_objections': [],
+        'internal_objections': [],
+        'external_objections': [],
+        'timestamp': None
+    })
+
+@app.route('/api/improvements', methods=['GET'])
+def api_improvements():
+    """API endpoint to get latest improvements"""
+    project = Project.query.order_by(Project.timestamp.desc()).first()
+    if project:
+        return jsonify({
+            'description_improvements': project.get_description_improvements_list(),
+            'internal_improvements': project.get_internal_improvements_list(),
+            'external_improvements': project.get_external_improvements_list(),
+            'timestamp': project.timestamp
+        })
+    return jsonify({
+        'description_improvements': [],
+        'internal_improvements': [],
+        'external_improvements': [],
+        'timestamp': None
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
