@@ -55,6 +55,8 @@ class BaseGenerator(ABC):
         try:
             api_key = current_app.config.get('CLAUDE_API_KEY')
             model = current_app.config.get('CLAUDE_MODEL', 'claude-3-opus-20240229')
+
+            # Create client without extra parameters that might cause issues
             client = anthropic.Anthropic(api_key=api_key)
         except Exception as e:
             self.logger.error(f"Error initializing Claude client: {str(e)}")

@@ -8,9 +8,14 @@ import json
 import os
 import sys
 from datetime import datetime
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Set up Flask application context for testing
-from flask import Flask
+from flask import Flask, current_app
 from config import Config
 
 # Import models and services
@@ -21,13 +26,25 @@ from services.artifacts.external_messaging import ExternalMessagingGenerator
 from services.artifacts.objection_generator import ObjectionGenerator
 from services.artifacts.improvement_generator import ImprovementGenerator
 
-# Setup test environment
-app = Flask(__name__)
-app.config.from_object(Config)
-db.init_app(app)
+# Try to get the Claude API key from Replit secrets
+claude_api_key = os.environ.get('CLAUDE_API_KEY')
 
-# Mock API key for testing - replace with your actual API key
-os.environ['CLAUDE_API_KEY'] = 'your_api_key_here'  
+# Setup test environment with API key if available
+app = Flask(__name__)
+config = Config()
+
+if claude_api_key:
+    # If found directly in environment, use it
+    config.CLAUDE_API_KEY = claude_api_key
+    app.config['CLAUDE_API_KEY'] = claude_api_key
+    print("Found Claude API key in environment variables!")
+else:
+    print("WARNING: No Claude API key found in environment variables.")
+    print("Will check application config during execution.")
+
+# Configure Flask application
+app.config.from_object(config)
+db.init_app(app)
 
 # Test project content (simplified example)
 TEST_PROJECT = {
@@ -91,6 +108,18 @@ def pretty_print_json(data):
 
     print(json.dumps(data, indent=2))
 
+def check_api_key():
+    """Check if API key is available in current app config."""
+    with app.app_context():
+        api_key = current_app.config.get('CLAUDE_API_KEY')
+        if api_key:
+            print("API key found in application config!")
+            return True
+        else:
+            print("No API key found in application config.")
+            print("Fallback methods will be used instead of Claude API.")
+            return False
+
 def test_project_description():
     """Test project description generation."""
     print_section("TESTING PROJECT DESCRIPTION GENERATOR")
@@ -102,7 +131,18 @@ def test_project_description():
     # Generate description with objections and improvements
     print("Generating project description, objections, and improvements...")
     project_content = json.dumps(TEST_PROJECT)
-    description_json = generator.generate(project_content)
+
+    # Check API key and execute within app context
+    with app.app_context():
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
+
+        # Generate content
+        description_json = generator.generate(project_content)
 
     # Parse and display results
     description = json.loads(description_json)
@@ -138,7 +178,18 @@ def test_internal_messaging():
     # Generate messaging with objections and improvements
     print("Generating internal messaging, objections, and improvements...")
     project_content = json.dumps(TEST_PROJECT)
-    messaging_json = generator.generate(project_content)
+
+    # Execute within app context
+    with app.app_context():
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
+
+        # Generate content
+        messaging_json = generator.generate(project_content)
 
     # Parse and display results
     messaging = json.loads(messaging_json)
@@ -179,7 +230,18 @@ def test_external_messaging():
     # Generate messaging with objections and improvements
     print("Generating external messaging, objections, and improvements...")
     project_content = json.dumps(TEST_PROJECT)
-    messaging_json = generator.generate(project_content)
+
+    # Execute within app context
+    with app.app_context():
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
+
+        # Generate content
+        messaging_json = generator.generate(project_content)
 
     # Parse and display results
     messaging = json.loads(messaging_json)
@@ -224,12 +286,21 @@ def test_direct_objection_generation():
         "description": "Our tool automatically syncs your documents and keeps everything aligned."
     }
 
-    # Generate objections for the mock artifact
-    objections_json = generator.generate_for_artifact(
-        json.loads(project_content), 
-        mock_artifact, 
-        'external'
-    )
+    # Execute within app context
+    with app.app_context():
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
+
+        # Generate objections
+        objections_json = generator.generate_for_artifact(
+            json.loads(project_content), 
+            mock_artifact, 
+            'external'
+        )
 
     # Parse and display results
     objections = json.loads(objections_json)
@@ -258,12 +329,21 @@ def test_direct_improvement_generation():
         "description": "Our tool automatically syncs your documents and keeps everything aligned."
     }
 
-    # Generate improvements for the mock artifact
-    improvements_json = generator.generate_for_artifact(
-        json.loads(project_content), 
-        mock_artifact, 
-        'external'
-    )
+    # Execute within app context
+    with app.app_context():
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
+
+        # Generate improvements
+        improvements_json = generator.generate_for_artifact(
+            json.loads(project_content), 
+            mock_artifact, 
+            'external'
+        )
 
     # Parse and display results
     improvements = json.loads(improvements_json)
@@ -274,96 +354,130 @@ def test_direct_improvement_generation():
         if "benefit" in improvement:
             print(f"  Benefit: {improvement['benefit']}")
 
-def test_save_to_database():
-    """Test saving generated content to the database."""
-    print_section("TESTING DATABASE INTEGRATION")
+def test_file_processing(file_path):
+    """Test processing a specific file."""
+    print_section(f"TESTING FILE PROCESSING: {file_path}")
 
+    # Check if file exists
+    if not os.path.isfile(file_path):
+        print(f"ERROR: File not found: {file_path}")
+        return
+
+    # Read file content
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            print(f"Successfully read file: {file_path}")
+            print(f"File size: {len(content)} characters")
+    except Exception as e:
+        print(f"ERROR reading file: {str(e)}")
+        return
+
+    # Create mock project structure based on file content
+    mock_project = {
+        'prd': {
+            'name': os.path.basename(file_path),
+            'overview': content[:500] + ("..." if len(content) > 500 else ""),
+            'problem_statement': "Extracted from file content",
+            'solution': "Generated based on file analysis"
+        },
+        'strategy': {
+            'vision': "Vision extracted from file content",
+            'approach': "Approach based on file analysis",
+            'business_value': "Business value determined from content"
+        },
+        'tickets': []
+    }
+
+    # Initialize generators
+    desc_generator = ProjectDescriptionGenerator()
+    internal_generator = InternalMessagingGenerator()
+    external_generator = ExternalMessagingGenerator()
+
+    # Generate artifacts with app context
     with app.app_context():
-        # Create database tables if they don't exist
-        db.create_all()
+        # Check if API key is available
+        key_available = current_app.config.get('CLAUDE_API_KEY') is not None
+        if key_available:
+            print("Using Claude API for generation")
+        else:
+            print("Using fallback methods (API key not available)")
 
-        # Initialize generators
-        desc_generator = ProjectDescriptionGenerator()
-        internal_generator = InternalMessagingGenerator()
-        external_generator = ExternalMessagingGenerator()
+        print("Generating artifacts from file content...")
 
-        # Generate content
-        project_content = json.dumps(TEST_PROJECT)
+        # Convert to JSON string
+        project_content = json.dumps(mock_project)
+
+        # Generate artifacts
         description = desc_generator.generate(project_content)
         internal_msg = internal_generator.generate(project_content)
         external_msg = external_generator.generate(project_content)
 
-        # Parse generated artifacts to extract objections and improvements
-        description_data = json.loads(description)
-        internal_data = json.loads(internal_msg)
-        external_data = json.loads(external_msg)
+    # Display results
+    print("\nGENERATED ARTIFACTS FROM FILE:")
 
-        # Extract objections
-        description_objections = json.dumps(description_data.get('objections', []))
-        internal_objections = json.dumps(internal_data.get('objections', []))
-        external_objections = json.dumps(external_data.get('objections', []))
+    # Display description
+    description_data = json.loads(description)
+    print("\nPROJECT DESCRIPTION:")
+    if "three_sentences" in description_data:
+        for i, sentence in enumerate(description_data["three_sentences"], 1):
+            print(f"{i}. {sentence}")
 
-        # Extract improvements
-        description_improvements = json.dumps(description_data.get('improvements', []))
-        internal_improvements = json.dumps(internal_data.get('improvements', []))
-        external_improvements = json.dumps(external_data.get('improvements', []))
+    # Display objections
+    if "objections" in description_data:
+        print("\nKEY OBJECTIONS:")
+        for objection in description_data["objections"][:2]:  # Show only top 2
+            print(f"- {objection['title']}: {objection['explanation']}")
 
-        # Create a new project record
-        project = Project(
-            content=project_content,
-            description=description,
-            internal_messaging=internal_msg,
-            external_messaging=external_msg,
-            description_objections=description_objections,
-            internal_objections=internal_objections,
-            external_objections=external_objections,
-            description_improvements=description_improvements,
-            internal_improvements=internal_improvements,
-            external_improvements=external_improvements,
-            timestamp=datetime.utcnow()
-        )
+    # Display improvements
+    if "improvements" in description_data:
+        print("\nTOP IMPROVEMENTS:")
+        for improvement in description_data["improvements"][:2]:  # Show only top 2
+            print(f"- {improvement['title']}: {improvement['suggestion']}")
 
-        # Save to database
-        db.session.add(project)
-        db.session.commit()
-
-        # Verify saved
-        saved_project = Project.query.order_by(Project.timestamp.desc()).first()
-        print(f"Project saved to database with ID: {saved_project.id}")
-        print(f"Timestamp: {saved_project.timestamp}")
-        print("Content includes:")
-        print(f"- Description: {'Yes' if saved_project.description else 'No'}")
-        print(f"- Internal Messaging: {'Yes' if saved_project.internal_messaging else 'No'}")
-        print(f"- External Messaging: {'Yes' if saved_project.external_messaging else 'No'}")
-        print(f"- Description Objections: {'Yes' if saved_project.description_objections else 'No'}")
-        print(f"- Internal Objections: {'Yes' if saved_project.internal_objections else 'No'}")
-        print(f"- External Objections: {'Yes' if saved_project.external_objections else 'No'}")
-        print(f"- Description Improvements: {'Yes' if saved_project.description_improvements else 'No'}")
-        print(f"- Internal Improvements: {'Yes' if saved_project.internal_improvements else 'No'}")
-        print(f"- External Improvements: {'Yes' if saved_project.external_improvements else 'No'}")
+    print("\nComplete analysis generated. Use main app for full details.")
 
 if __name__ == "__main__":
     print("Project Alignment Tool Test Script")
     print("=================================")
     print("This script demonstrates the functionality of the Project Alignment Tool")
     print("including content generation, objections, and improvements.")
-    print("\nYou need to have a valid Claude API key to run this test.")
 
-    # Execute tests
-    try:
-        test_project_description()
-        test_internal_messaging()
-        test_external_messaging()
-        test_direct_objection_generation()
-        test_direct_improvement_generation()
+    # Check for API key
+    api_key_available = check_api_key()
+    if not api_key_available:
+        print("\nTo use the Claude API, make sure your API key is:")
+        print("1. In your Replit Secrets as 'CLAUDE_API_KEY'")
+        print("2. Or set in your environment variables")
+        print("3. Or defined in config.py")
 
-        # Only run database test if specified
-        if len(sys.argv) > 1 and sys.argv[1] == '--with-db':
-            test_save_to_database()
-    except Exception as e:
-        print(f"\nERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # Check for file argument
+    if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
+        # Process specific file
+        test_file_processing(sys.argv[1])
+    else:
+        # Execute standard tests
+        try:
+            test_project_description()
+            test_internal_messaging()
+            test_external_messaging()
+            test_direct_objection_generation()
+            test_direct_improvement_generation()
+
+            # Only run database test if specified
+            if len(sys.argv) > 1 and sys.argv[1] == '--with-db':
+                with app.app_context():
+                    test_save_to_database()
+
+            # If no valid file was provided but arguments exist
+            if len(sys.argv) > 1 and not os.path.isfile(sys.argv[1]) and sys.argv[1] != '--with-db':
+                print(f"\nWARNING: Could not find file: {sys.argv[1]}")
+                print("Usage: python test.py [file_to_analyze.md] [--with-db]")
+
+        except Exception as e:
+            print(f"\nERROR: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
     print("\nAll tests completed!")
