@@ -1,490 +1,369 @@
+#!/usr/bin/env python3
+"""
+Test script for the Project Alignment Tool.
+This demonstrates how to use the generators, objection system, and improvement system.
+"""
+
 import json
 import os
 import sys
-import re
-import requests
-import argparse
-
-# Import prompts
-try:
-    from prompts import get_prompt
-except ImportError:
-    print("Prompts file not found. Make sure prompts.py is in the same directory.")
-    sys.exit(1)
-
-# Simple mock for the Project model
-class MockProject:
-    def __init__(self, content=None, description=None, internal_messaging=None, external_messaging=None):
-        self.content = content
-        self.description = description
-        self.internal_messaging = internal_messaging
-        self.external_messaging = external_messaging
-
-# Simple mock for the current_app configuration
-class MockApp:
-    config = {
-        'CLAUDE_API_KEY': os.environ.get('CLAUDE_API_KEY', ''),
-        'CLAUDE_MODEL': 'claude-3-opus-20240229'
-    }
-
-# Mock the flask current_app
-sys.modules['flask'] = type('MockFlask', (), {'current_app': MockApp})
-
-# Mock the models
-sys.modules['models'] = type('MockModels', (), {'Project': MockProject})
-
-def call_claude_api(prompt):
-    """Call Claude API directly using HTTP requests"""
-    api_key = os.environ.get('CLAUDE_API_KEY')
-    if not api_key:
-        return None
-
-    headers = {
-        'x-api-key': api_key,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-    }
-
-    data = {
-        'model': 'claude-3-opus-20240229',
-        'max_tokens': 1500,  # Increased max tokens to ensure full response with objections
-        'messages': [
-            {'role': 'user', 'content': prompt}
-        ]
-    }
-
-    try:
-        response = requests.post(
-            'https://api.anthropic.com/v1/messages',
-            headers=headers,
-            json=data
-        )
-        response.raise_for_status()
-        result = response.json()
-        return result['content'][0]['text']
-    except Exception as e:
-        print(f"Error calling Claude API: {e}")
-        return None
-
-def clean_bullets_and_lists(text):
-    """Clean bullet points and numbered lists from text"""
-    if not text:
-        return ""
-
-    # Clean bullet points
-    text = re.sub(r'(?m)^\s*[\*\-•]\s*', '', text)
-
-    # Clean numbered lists
-    text = re.sub(r'(?m)^\s*\d+\.\s*', '', text)
-
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text)
-
-    return text.strip()
-
-def extract_first_sentence(text):
-    """Extract just the first complete sentence from text"""
-    if not text:
-        return ""
-
-    # Remove any markdown or formatting
-    text = clean_markdown_text(text)
-    text = clean_bullets_and_lists(text)
-
-    # Find the first sentence
-    sentence_match = re.search(r'^([^.!?]+[.!?])', text)
-    if sentence_match:
-        return sentence_match.group(1).strip()
-
-    # If no complete sentence, return up to 100 chars
-    if len(text) > 100:
-        return text[:100].strip() + "..."
-
-    return text.strip()
-
-def extract_sections_from_readme(content):
-    """Extract sections from README content using more robust parsing"""
-    # Get project name (first heading)
-    project_name = "Project Alignment Tool"
-    title_match = re.search(r'^#\s+(.+?)$', content, re.MULTILINE)
-    if title_match:
-        project_name = title_match.group(1).strip()
-
-    # Extract sections based on markdown headers
-    sections = {}
-
-    # Try to find the Overview/Introduction section
-    overview = ""
-    overview_pattern = re.search(r'(?:^|\n)##\s*(?:Overview|Introduction)\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.MULTILINE)
-    if overview_pattern:
-        overview = overview_pattern.group(1).strip()
-    else:
-        # If no Overview section, try to get the first paragraph after the title
-        first_para = re.search(r'^#\s+.+?\n\n(.*?)(?=\n\n|\Z)', content, re.DOTALL | re.MULTILINE)
-        if first_para:
-            overview = first_para.group(1).strip()
-    sections['overview'] = overview
-
-    # Find Pain Points or Challenges section
-    pain_points = ""
-    pain_pattern = re.search(r'(?:^|\n)##\s*(?:Pain Points|Challenges|Problems)\s*(?:Addressed)?\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.MULTILINE)
-    if pain_pattern:
-        pain_points = pain_pattern.group(1).strip()
-    sections['pain_points'] = pain_points
-
-    # Find Solution section
-    solution = ""
-    solution_pattern = re.search(r'(?:^|\n)##\s*(?:Solution|Approach|How It Works)\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.MULTILINE)
-    if solution_pattern:
-        solution = solution_pattern.group(1).strip()
-    sections['solution'] = solution
-
-    # Find Benefits/Features section
-    benefits = ""
-    benefits_pattern = re.search(r'(?:^|\n)##\s*(?:Key Benefits|Benefits|Features|Key Features)\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.MULTILINE)
-    if benefits_pattern:
-        benefits = benefits_pattern.group(1).strip()
-    sections['benefits'] = benefits
-
-    # Clean markdown formatting from each section
-    cleaned_sections = {}
-    for key, value in sections.items():
-        # Clean markdown formatting first
-        cleaned = clean_markdown_text(value)
-
-        # Store both the full cleaned text
-        cleaned_sections[key] = cleaned
-
-    return project_name, cleaned_sections
-
-def clean_markdown_text(text):
-    """Clean markdown formatting from text"""
-    if not text:
-        return ""
-
-    # Remove markdown headers
-    text = re.sub(r'^#{1,6}\s+.*$', '', text, flags=re.MULTILINE)
-
-    # Remove markdown list markers
-    text = re.sub(r'^\s*[\*\-\+]\s+', '', text, flags=re.MULTILINE)
-    text = re.sub(r'^\s*\d+\.\s+', '', text, flags=re.MULTILINE)
-
-    # Remove markdown emphasis
-    text = re.sub(r'[*_]{1,2}(.*?)[*_]{1,2}', r'\1', text)
-
-    # Remove markdown code blocks and inline code
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-    text = re.sub(r'`(.*?)`', r'\1', text)
-
-    # Remove HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
-
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text)
-
-    # Remove leading/trailing whitespace
-    text = text.strip()
-
-    return text
-
-def direct_generate_with_claude(sections, project_name):
-    """Generate artifacts directly using Claude API via HTTP with MOO prompts"""
-    # Create context for Claude
-    context = f"""
-Project Name: {project_name}
-
-Overview:
-{sections['overview']}
-
-Pain Points:
-{sections['pain_points']}
-
-Solution:
-{sections['solution']}
-
-Benefits:
-{sections['benefits']}
-    """
-
-    # Always use the standard prompt types (which are now MOO-integrated)
-    desc_prompt_type = 'project_description'
-    internal_prompt_type = 'internal_messaging'
-    external_prompt_type = 'external_messaging'
-
-    # Get prompts with context and variables filled in
-    desc_prompt = get_prompt(desc_prompt_type, context)
-    internal_prompt = get_prompt(internal_prompt_type, context, project_name=project_name)
-    external_prompt = get_prompt(external_prompt_type, context)
-
-    # Call Claude API for each prompt
-    print("Calling Claude API for project description...")
-    desc_text = call_claude_api(desc_prompt)
-
-    print("Calling Claude API for internal messaging...")
-    internal_text = call_claude_api(internal_prompt)
-
-    print("Calling Claude API for external messaging...")
-    external_text = call_claude_api(external_prompt)
-
-    # Extract JSON from responses
-    desc_json = extract_json(desc_text) if desc_text else None
-    internal_json = extract_json(internal_text) if internal_text else None
-    external_json = extract_json(external_text) if external_text else None
-
-    return desc_json, internal_json, external_json
-
-def extract_json(text):
-    """Extract JSON from Claude's response"""
-    if not text:
-        print("Empty response received from Claude API")
-        return None
-
-    json_start = text.find('{')
-    json_end = text.rfind('}') + 1
-
-    if json_start != -1 and json_end != -1:
-        json_str = text[json_start:json_end]
-        try:
-            return json.loads(json_str)
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON from Claude response: {e}")
-            print(f"Extracted text: {json_str[:200]}...")  # Show just the start to avoid cluttering output
-            # In case of complex formats, try more robust extraction
-            try:
-                # Find where the JSON object seems to start and end
-                bracketing = 0
-                real_end = 0
-                for i, char in enumerate(text[json_start:]):
-                    if char == '{':
-                        bracketing += 1
-                    elif char == '}':
-                        bracketing -= 1
-                        if bracketing == 0:
-                            real_end = json_start + i + 1
-                            break
-
-                if real_end > 0:
-                    better_json_str = text[json_start:real_end]
-                    return json.loads(better_json_str)
-            except:
-                pass  # If that didn't work either, just return None
-
-    print("No valid JSON found in Claude's response")
-    print("Response starts with:", text[:200] + "..." if len(text) > 200 else text)
-    return None
-
-def print_objections(objections, title="Objections"):
-    """Print objections and responses in a readable format"""
-    if not objections or not isinstance(objections, list):
-        print(f"\n{title}: None found in response")
-        return
-
-    print(f"\n{title}:")
-    for i, obj in enumerate(objections):
-        if isinstance(obj, dict):
-            print(f"\nObjection {i+1}: {obj.get('objection', '')}")
-            print(f"Response: {obj.get('response', '')}")
-
-def test_with_readme(readme_path):
-    """Test the artifact generators with a README file"""
-    try:
-        # Read the README file
-        with open(readme_path, 'r') as f:
-            readme_content = f.read()
-
-        # Extract sections from the README
-        project_name, sections = extract_sections_from_readme(readme_content)
-
-        # Print diagnostic info first
-        print("\n========== EXTRACTED CONTENT ==========")
-        print(f"Project Name: {project_name}")
-
-        for section_name, content in sections.items():
-            print(f"\n{section_name.title()}:")
-            # Print just the first 200 chars if it's long
-            if len(content) > 200:
-                print(content[:200] + "...")
-            else:
-                print(content)
-
-        # Check if Claude API key is available
-        api_key = os.environ.get('CLAUDE_API_KEY')
-        if api_key:
-            print(f"\nClaude API key is available! Generating content directly with Claude...")
-            print("Using MOO-integrated prompts for generation (objections will be included)")
-
-            # Try to generate content directly with Claude
-            desc_json, internal_json, external_json = direct_generate_with_claude(sections, project_name)
-
-            if desc_json and internal_json and external_json:
-                # Print Claude-generated results
-                print("\n========== CLAUDE-GENERATED PROJECT DESCRIPTION ==========")
-                print("\nThree Sentences:")
-                for i, sentence in enumerate(desc_json['three_sentences']):
-                    print(f"{i+1}. {sentence}")
-
-                print("\nThree Paragraphs:")
-                for i, paragraph in enumerate(desc_json['three_paragraphs']):
-                    print(f"\nParagraph {i+1}:")
-                    print(paragraph)
-
-                # Print objections
-                if 'objections' in desc_json:
-                    print_objections(desc_json['objections'])
-                else:
-                    print("\nWARNING: No objections found in project description response!")
-
-                print("\n\n========== CLAUDE-GENERATED INTERNAL MESSAGING ==========")
-                print(f"\nSubject: {internal_json.get('subject', '')}")
-                print(f"\nWhat It Is: {internal_json.get('what_it_is', '')}")
-                print(f"\nCustomer Pain: {internal_json.get('customer_pain', '')}")
-                print(f"\nOur Solution: {internal_json.get('our_solution', '')}")
-                print(f"\nBusiness Impact: {internal_json.get('business_impact', '')}")
-
-                # Print objections
-                if 'objections' in internal_json:
-                    print_objections(internal_json['objections'])
-                else:
-                    print("\nWARNING: No objections found in internal messaging response!")
-
-                print("\n\n========== CLAUDE-GENERATED EXTERNAL MESSAGING ==========")
-                print(f"\nHeadline: {external_json.get('headline', '')}")
-                print(f"\nPain Point: {external_json.get('pain_point', '')}")
-                print(f"\nSolution: {external_json.get('solution', '')}")
-                print(f"\nBenefits: {external_json.get('benefits', '')}")
-                if 'call_to_action' in external_json:
-                    print(f"\nCall to Action: {external_json.get('call_to_action', '')}")
-
-                # Print objections
-                if 'objections' in external_json:
-                    print_objections(external_json['objections'])
-                else:
-                    print("\nWARNING: No objections found in external messaging response!")
-
-                return True
-            else:
-                print("Claude API returned incomplete results. Falling back to rule-based generation.")
-        else:
-            print("\nNOTE: Claude API key not found. Using rule-based generation.")
-
-        # Import generators for rule-based generation
-        print("\nFalling back to rule-based generators...")
-        from services.artifacts.project_description import ProjectDescriptionGenerator
-        from services.artifacts.internal_messaging import InternalMessagingGenerator
-        from services.artifacts.external_messaging import ExternalMessagingGenerator
-
-        # Create better formatted content with more concise sections
-        better_content = {
-            'prd': {
-                'name': project_name,
-                'overview': extract_first_sentence(sections['overview']),
-                'problem_statement': extract_first_sentence(sections['pain_points']),
-                'solution': extract_first_sentence(sections['solution'])
+from datetime import datetime
+
+# Set up Flask application context for testing
+from flask import Flask
+from config import Config
+
+# Import models and services
+from models import db, Project
+from services.artifacts.project_description import ProjectDescriptionGenerator
+from services.artifacts.internal_messaging import InternalMessagingGenerator
+from services.artifacts.external_messaging import ExternalMessagingGenerator
+from services.artifacts.objection_generator import ObjectionGenerator
+from services.artifacts.improvement_generator import ImprovementGenerator
+
+# Setup test environment
+app = Flask(__name__)
+app.config.from_object(Config)
+db.init_app(app)
+
+# Mock API key for testing - replace with your actual API key
+os.environ['CLAUDE_API_KEY'] = 'your_api_key_here'  
+
+# Test project content (simplified example)
+TEST_PROJECT = {
+    'prd': {
+        'name': 'Document Sync Tool',
+        'overview': 'A tool that synchronizes documentation across different systems and keeps everything in alignment.',
+        'problem_statement': 'Teams waste hours reconciling inconsistent documentation across different systems, leading to errors and delays.',
+        'solution': 'We automatically monitor document changes and suggest updates to maintain alignment across all connected documents.'
+    },
+    'prfaq': {
+        'press_release': 'Announcing Document Sync Tool: End the document alignment nightmare once and for all.',
+        'frequently_asked_questions': [
+            {
+                'question': 'What problem does this solve?',
+                'answer': 'Teams waste 4+ hours weekly reconciling inconsistent documentation.'
             },
-            'tickets': [],
-            'strategy': {
-                'vision': extract_first_sentence(sections['overview']),
-                'business_value': extract_first_sentence(sections['benefits'])
-            },
-            'prfaq': {
-                'frequently_asked_questions': [
-                    {
-                        'question': 'What problem does this solve?',
-                        'answer': extract_first_sentence(sections['pain_points'])
-                    },
-                    {
-                        'question': 'What are the benefits?',
-                        'answer': extract_first_sentence(sections['benefits'])
-                    }
-                ]
+            {
+                'question': 'How does it work?',
+                'answer': 'We connect to your documentation systems and monitor changes, then suggest updates to maintain alignment.'
             }
+        ]
+    },
+    'strategy': {
+        'vision': 'Create a world where documentation is always accurate and teams never waste time on reconciliation.',
+        'approach': 'Build connectors to popular documentation systems and use NLP to identify inconsistencies.',
+        'business_value': 'Save teams 4+ hours per week and reduce implementation errors by 45%.'
+    },
+    'tickets': [
+        {
+            'id': 'SYNC-1',
+            'title': 'Implement document connector system',
+            'status': 'In Progress'
+        },
+        {
+            'id': 'SYNC-2',
+            'title': 'Build inconsistency detection engine',
+            'status': 'To Do'
+        },
+        {
+            'id': 'SYNC-3',
+            'title': 'Create update suggestion system',
+            'status': 'To Do'
         }
+    ]
+}
 
-        # Convert to JSON
-        project_content = json.dumps(better_content)
+def print_section(title):
+    """Print a section divider with title."""
+    print("\n" + "=" * 80)
+    print(f"  {title}")
+    print("=" * 80)
+
+def pretty_print_json(data):
+    """Pretty-print JSON data."""
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except json.JSONDecodeError:
+            print(data)
+            return
+
+    print(json.dumps(data, indent=2))
+
+def test_project_description():
+    """Test project description generation."""
+    print_section("TESTING PROJECT DESCRIPTION GENERATOR")
+
+    # Initialize generator
+    print("Initializing ProjectDescriptionGenerator...")
+    generator = ProjectDescriptionGenerator()
+
+    # Generate description with objections and improvements
+    print("Generating project description, objections, and improvements...")
+    project_content = json.dumps(TEST_PROJECT)
+    description_json = generator.generate(project_content)
+
+    # Parse and display results
+    description = json.loads(description_json)
+
+    print("\nTHREE SENTENCES:")
+    for i, sentence in enumerate(description["three_sentences"], 1):
+        print(f"{i}. {sentence}")
+
+    print("\nTHREE PARAGRAPHS:")
+    for i, paragraph in enumerate(description["three_paragraphs"], 1):
+        print(f"Paragraph {i}: {paragraph}")
+
+    print("\nOBJECTIONS:")
+    for objection in description.get("objections", []):
+        print(f"- {objection['title']}: {objection['explanation']}")
+        if "impact" in objection:
+            print(f"  Impact: {objection['impact']}")
+
+    print("\nIMPROVEMENTS:")
+    for improvement in description.get("improvements", []):
+        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        if "benefit" in improvement:
+            print(f"  Benefit: {improvement['benefit']}")
+
+def test_internal_messaging():
+    """Test internal messaging generation."""
+    print_section("TESTING INTERNAL MESSAGING GENERATOR")
+
+    # Initialize generator
+    print("Initializing InternalMessagingGenerator...")
+    generator = InternalMessagingGenerator()
+
+    # Generate messaging with objections and improvements
+    print("Generating internal messaging, objections, and improvements...")
+    project_content = json.dumps(TEST_PROJECT)
+    messaging_json = generator.generate(project_content)
+
+    # Parse and display results
+    messaging = json.loads(messaging_json)
+
+    print("\nINTERNAL MESSAGING:")
+    print(f"Subject: {messaging.get('subject', '')}")
+    print(f"What It Is: {messaging.get('what_it_is', '')}")
+    print(f"Customer Pain: {messaging.get('customer_pain', '')}")
+    print(f"Our Solution: {messaging.get('our_solution', '')}")
+    print(f"Business Impact: {messaging.get('business_impact', '')}")
+
+    if 'timeline' in messaging:
+        print(f"Timeline: {messaging['timeline']}")
+
+    if 'team_needs' in messaging:
+        print(f"Team Needs: {messaging['team_needs']}")
+
+    print("\nOBJECTIONS:")
+    for objection in messaging.get("objections", []):
+        print(f"- {objection['title']}: {objection['explanation']}")
+        if "impact" in objection:
+            print(f"  Impact: {objection['impact']}")
+
+    print("\nIMPROVEMENTS:")
+    for improvement in messaging.get("improvements", []):
+        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        if "benefit" in improvement:
+            print(f"  Benefit: {improvement['benefit']}")
+
+def test_external_messaging():
+    """Test external messaging generation."""
+    print_section("TESTING EXTERNAL MESSAGING GENERATOR")
+
+    # Initialize generator
+    print("Initializing ExternalMessagingGenerator...")
+    generator = ExternalMessagingGenerator()
+
+    # Generate messaging with objections and improvements
+    print("Generating external messaging, objections, and improvements...")
+    project_content = json.dumps(TEST_PROJECT)
+    messaging_json = generator.generate(project_content)
+
+    # Parse and display results
+    messaging = json.loads(messaging_json)
+
+    print("\nEXTERNAL MESSAGING:")
+    print(f"Headline: {messaging.get('headline', '')}")
+    print(f"Pain Point: {messaging.get('pain_point', '')}")
+    print(f"Solution: {messaging.get('solution', '')}")
+
+    if 'benefits' in messaging:
+        print(f"Benefits: {messaging['benefits']}")
+
+    print(f"Call to Action: {messaging.get('call_to_action', '')}")
+
+    print("\nOBJECTIONS:")
+    for objection in messaging.get("objections", []):
+        print(f"- {objection['title']}: {objection['explanation']}")
+        if "impact" in objection:
+            print(f"  Impact: {objection['impact']}")
+
+    print("\nIMPROVEMENTS:")
+    for improvement in messaging.get("improvements", []):
+        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        if "benefit" in improvement:
+            print(f"  Benefit: {improvement['benefit']}")
+
+def test_direct_objection_generation():
+    """Test direct objection generation."""
+    print_section("TESTING DIRECT OBJECTION GENERATION")
+
+    # Initialize generator
+    print("Initializing ObjectionGenerator...")
+    generator = ObjectionGenerator()
+
+    # Generate objections directly
+    print("Generating objections directly...")
+    project_content = json.dumps(TEST_PROJECT)
+
+    # Create a mock artifact
+    mock_artifact = {
+        "headline": "Save 4+ hours per week on documentation",
+        "description": "Our tool automatically syncs your documents and keeps everything aligned."
+    }
+
+    # Generate objections for the mock artifact
+    objections_json = generator.generate_for_artifact(
+        json.loads(project_content), 
+        mock_artifact, 
+        'external'
+    )
+
+    # Parse and display results
+    objections = json.loads(objections_json)
+
+    print("\nDIRECTLY GENERATED OBJECTIONS:")
+    for objection in objections:
+        print(f"- {objection['title']}: {objection['explanation']}")
+        if "impact" in objection:
+            print(f"  Impact: {objection['impact']}")
+
+def test_direct_improvement_generation():
+    """Test direct improvement generation."""
+    print_section("TESTING DIRECT IMPROVEMENT GENERATION")
+
+    # Initialize generator
+    print("Initializing ImprovementGenerator...")
+    generator = ImprovementGenerator()
+
+    # Generate improvements directly
+    print("Generating improvements directly...")
+    project_content = json.dumps(TEST_PROJECT)
+
+    # Create a mock artifact
+    mock_artifact = {
+        "headline": "Save 4+ hours per week on documentation",
+        "description": "Our tool automatically syncs your documents and keeps everything aligned."
+    }
+
+    # Generate improvements for the mock artifact
+    improvements_json = generator.generate_for_artifact(
+        json.loads(project_content), 
+        mock_artifact, 
+        'external'
+    )
+
+    # Parse and display results
+    improvements = json.loads(improvements_json)
+
+    print("\nDIRECTLY GENERATED IMPROVEMENTS:")
+    for improvement in improvements:
+        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        if "benefit" in improvement:
+            print(f"  Benefit: {improvement['benefit']}")
+
+def test_save_to_database():
+    """Test saving generated content to the database."""
+    print_section("TESTING DATABASE INTEGRATION")
+
+    with app.app_context():
+        # Create database tables if they don't exist
+        db.create_all()
 
         # Initialize generators
-        project_desc_gen = ProjectDescriptionGenerator()
-        internal_msg_gen = InternalMessagingGenerator()
-        external_msg_gen = ExternalMessagingGenerator()
+        desc_generator = ProjectDescriptionGenerator()
+        internal_generator = InternalMessagingGenerator()
+        external_generator = ExternalMessagingGenerator()
 
-        # Generate artifacts
-        description = project_desc_gen.generate(project_content)
-        internal_msg = internal_msg_gen.generate(project_content)
-        external_msg = external_msg_gen.generate(project_content)
+        # Generate content
+        project_content = json.dumps(TEST_PROJECT)
+        description = desc_generator.generate(project_content)
+        internal_msg = internal_generator.generate(project_content)
+        external_msg = external_generator.generate(project_content)
 
-        # Print results
-        print("\n========== RULE-BASED PROJECT DESCRIPTION ==========")
-        description_obj = json.loads(description)
+        # Parse generated artifacts to extract objections and improvements
+        description_data = json.loads(description)
+        internal_data = json.loads(internal_msg)
+        external_data = json.loads(external_msg)
 
-        print("\nThree Sentences:")
-        for i, sentence in enumerate(description_obj['three_sentences']):
-            print(f"{i+1}. {sentence}")
+        # Extract objections
+        description_objections = json.dumps(description_data.get('objections', []))
+        internal_objections = json.dumps(internal_data.get('objections', []))
+        external_objections = json.dumps(external_data.get('objections', []))
 
-        print("\nThree Paragraphs:")
-        for i, paragraph in enumerate(description_obj['three_paragraphs']):
-            print(f"\nParagraph {i+1}:")
-            print(paragraph)
+        # Extract improvements
+        description_improvements = json.dumps(description_data.get('improvements', []))
+        internal_improvements = json.dumps(internal_data.get('improvements', []))
+        external_improvements = json.dumps(external_data.get('improvements', []))
 
-        # Print objections if present
-        if 'objections' in description_obj:
-            print_objections(description_obj['objections'])
-        else:
-            print("\nWARNING: No objections found in rule-based project description!")
+        # Create a new project record
+        project = Project(
+            content=project_content,
+            description=description,
+            internal_messaging=internal_msg,
+            external_messaging=external_msg,
+            description_objections=description_objections,
+            internal_objections=internal_objections,
+            external_objections=external_objections,
+            description_improvements=description_improvements,
+            internal_improvements=internal_improvements,
+            external_improvements=external_improvements,
+            timestamp=datetime.utcnow()
+        )
 
-        print("\n\n========== RULE-BASED INTERNAL MESSAGING ==========")
-        internal_obj = json.loads(internal_msg)
+        # Save to database
+        db.session.add(project)
+        db.session.commit()
 
-        print(f"\nSubject: {internal_obj.get('subject', '')}")
-        print(f"\nWhat It Is: {internal_obj.get('what_it_is', '')}")
-        print(f"\nCustomer Pain: {internal_obj.get('customer_pain', '')}")
-        print(f"\nOur Solution: {internal_obj.get('our_solution', '')}")
-        print(f"\nBusiness Impact: {internal_obj.get('business_impact', '')}")
-
-        # Print objections if present
-        if 'objections' in internal_obj:
-            print_objections(internal_obj['objections'])
-        else:
-            print("\nWARNING: No objections found in rule-based internal messaging!")
-
-        print("\n\n========== RULE-BASED EXTERNAL MESSAGING ==========")
-        external_obj = json.loads(external_msg)
-
-        print(f"\nHeadline: {external_obj.get('headline', '')}")
-        print(f"\nPain Point: {external_obj.get('pain_point', '')}")
-        print(f"\nSolution: {external_obj.get('solution', '')}")
-        print(f"\nBenefits: {external_obj.get('benefits', '')}")
-        if 'call_to_action' in external_obj:
-            print(f"\nCall to Action: {external_obj.get('call_to_action', '')}")
-
-        # Print objections if present
-        if 'objections' in external_obj:
-            print_objections(external_obj['objections'])
-        else:
-            print("\nWARNING: No objections found in rule-based external messaging!")
-
-        return True
-
-    except Exception as e:
-        print(f"Error testing with README: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return False
+        # Verify saved
+        saved_project = Project.query.order_by(Project.timestamp.desc()).first()
+        print(f"Project saved to database with ID: {saved_project.id}")
+        print(f"Timestamp: {saved_project.timestamp}")
+        print("Content includes:")
+        print(f"- Description: {'Yes' if saved_project.description else 'No'}")
+        print(f"- Internal Messaging: {'Yes' if saved_project.internal_messaging else 'No'}")
+        print(f"- External Messaging: {'Yes' if saved_project.external_messaging else 'No'}")
+        print(f"- Description Objections: {'Yes' if saved_project.description_objections else 'No'}")
+        print(f"- Internal Objections: {'Yes' if saved_project.internal_objections else 'No'}")
+        print(f"- External Objections: {'Yes' if saved_project.external_objections else 'No'}")
+        print(f"- Description Improvements: {'Yes' if saved_project.description_improvements else 'No'}")
+        print(f"- Internal Improvements: {'Yes' if saved_project.internal_improvements else 'No'}")
+        print(f"- External Improvements: {'Yes' if saved_project.external_improvements else 'No'}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Test artifact generators with a README file')
-    parser.add_argument('readme_path', help='Path to the README file')
+    print("Project Alignment Tool Test Script")
+    print("=================================")
+    print("This script demonstrates the functionality of the Project Alignment Tool")
+    print("including content generation, objections, and improvements.")
+    print("\nYou need to have a valid Claude API key to run this test.")
 
-    args = parser.parse_args()
+    # Execute tests
+    try:
+        test_project_description()
+        test_internal_messaging()
+        test_external_messaging()
+        test_direct_objection_generation()
+        test_direct_improvement_generation()
 
-    if not os.path.exists(args.readme_path):
-        print(f"Error: File {args.readme_path} does not exist")
+        # Only run database test if specified
+        if len(sys.argv) > 1 and sys.argv[1] == '--with-db':
+            test_save_to_database()
+    except Exception as e:
+        print(f"\nERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
-    success = test_with_readme(args.readme_path)
-
-    if success:
-        print("\nTest completed successfully!")
-    else:
-        print("\nTest failed.")
-        sys.exit(1)
+    print("\nAll tests completed!")

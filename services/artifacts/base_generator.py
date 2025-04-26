@@ -1,9 +1,10 @@
 # services/artifacts/base_generator.py
 import json
 import logging
+from abc import ABC, abstractmethod
 from flask import current_app
 import anthropic
-from abc import ABC, abstractmethod
+from models import db
 
 class BaseGenerator(ABC):
     """
@@ -16,6 +17,24 @@ class BaseGenerator(ABC):
     def __init__(self):
         """Initialize the generator with a logger."""
         self.logger = logging.getLogger(self.__class__.__name__)
+
+    @abstractmethod
+    def generate(self, *args, **kwargs):
+        """
+        Generate content based on project data.
+
+        This method must be implemented by subclasses.
+        """
+        pass
+
+    @abstractmethod
+    def get_latest(self):
+        """
+        Get the latest generated content.
+
+        This method must be implemented by subclasses.
+        """
+        pass
 
     def generate_with_claude(self, prompt, fallback_method, fallback_args=None):
         """
@@ -59,7 +78,12 @@ class BaseGenerator(ABC):
             json_start = response_text.find('{')
             json_end = response_text.rfind('}') + 1
 
-            if json_start != -1 and json_end != -1:
+            # If we didn't find an object, look for an array
+            if json_start == -1 or json_end <= json_start:
+                json_start = response_text.find('[')
+                json_end = response_text.rfind(']') + 1
+
+            if json_start != -1 and json_end > json_start:
                 json_str = response_text[json_start:json_end]
                 try:
                     # Validate JSON by parsing it
@@ -133,21 +157,3 @@ class BaseGenerator(ABC):
             prompt_parts.append(f"# 10. Quality Assurance\n{quality}")
 
         return "\n\n".join(prompt_parts)
-
-    @abstractmethod
-    def generate(self, *args, **kwargs):
-        """
-        Generate content based on project data.
-
-        This method must be implemented by subclasses.
-        """
-        pass
-
-    @abstractmethod
-    def get_latest(self):
-        """
-        Get the latest generated content.
-
-        This method must be implemented by subclasses.
-        """
-        pass

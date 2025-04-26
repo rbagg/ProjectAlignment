@@ -5,6 +5,7 @@ from models import Project
 from flask import current_app
 from .base_generator import BaseGenerator
 from .objection_generator import ObjectionGenerator
+from .improvement_generator import ImprovementGenerator
 
 class ExternalMessagingGenerator(BaseGenerator):
     """
@@ -13,9 +14,10 @@ class ExternalMessagingGenerator(BaseGenerator):
     """
 
     def __init__(self):
-        """Initialize the generator with a logger and objection generator."""
+        """Initialize the generator with a logger, objection generator, and improvement generator."""
         super().__init__()
         self.objection_generator = ObjectionGenerator()
+        self.improvement_generator = ImprovementGenerator()
 
     def get_latest(self):
         """Get the latest generated external messaging"""
@@ -26,6 +28,10 @@ class ExternalMessagingGenerator(BaseGenerator):
             # Add objections if available
             if project.external_objections:
                 result['objections'] = project.get_external_objections_list()
+
+            # Add improvements if available
+            if project.external_improvements:
+                result['improvements'] = project.get_external_improvements_list()
 
             return result
         return None
@@ -66,8 +72,13 @@ class ExternalMessagingGenerator(BaseGenerator):
         objections_json = self.objection_generator.generate_for_artifact(
             content, messaging, 'external')
 
-        # Combine messaging and objections
+        # Generate improvements
+        improvements_json = self.improvement_generator.generate_for_artifact(
+            content, messaging, 'external')
+
+        # Combine messaging, objections, and improvements
         messaging['objections'] = self.parse_content(objections_json)
+        messaging['improvements'] = self.parse_content(improvements_json)
 
         return json.dumps(messaging)
 

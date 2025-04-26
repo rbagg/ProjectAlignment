@@ -5,6 +5,7 @@ from models import Project
 from flask import current_app
 from .base_generator import BaseGenerator
 from .objection_generator import ObjectionGenerator
+from .improvement_generator import ImprovementGenerator
 
 class InternalMessagingGenerator(BaseGenerator):
     """
@@ -16,6 +17,7 @@ class InternalMessagingGenerator(BaseGenerator):
         """Initialize the generator with a logger and objection generator."""
         super().__init__()
         self.objection_generator = ObjectionGenerator()
+        self.improvement_generator = ImprovementGenerator()
 
     def get_latest(self):
         """Get the latest generated internal messaging"""
@@ -26,6 +28,10 @@ class InternalMessagingGenerator(BaseGenerator):
             # Add objections if available
             if project.internal_objections:
                 result['objections'] = project.get_internal_objections_list()
+
+            # Add improvements if available
+            if project.internal_improvements:
+                result['improvements'] = project.get_internal_improvements_list()
 
             return result
         return None
@@ -66,8 +72,13 @@ class InternalMessagingGenerator(BaseGenerator):
         objections_json = self.objection_generator.generate_for_artifact(
             content, messaging, 'internal')
 
-        # Combine messaging and objections
+        # Generate improvements
+        improvements_json = self.improvement_generator.generate_for_artifact(
+            content, messaging, 'internal')
+
+        # Combine messaging, objections, and improvements
         messaging['objections'] = self.parse_content(objections_json)
+        messaging['improvements'] = self.parse_content(improvements_json)
 
         return json.dumps(messaging)
 

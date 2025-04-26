@@ -10,6 +10,43 @@ class ObjectionGenerator(BaseGenerator):
     Core feature for challenging assumptions and improving communication.
     """
 
+    def get_latest(self):
+        """
+        Get latest objections from database.
+        Required implementation of abstract method from BaseGenerator.
+
+        Returns:
+            dict: Latest objections or None
+        """
+        project = Project.query.order_by(Project.timestamp.desc()).first()
+        if not project:
+            return None
+
+        return {
+            'description': project.get_description_objections_list(),
+            'internal': project.get_internal_objections_list(),
+            'external': project.get_external_objections_list()
+        }
+
+    def generate(self, project_content, artifact_type='description'):
+        """
+        Generate objections for project content.
+        Required implementation of abstract method from BaseGenerator.
+
+        Args:
+            project_content (str): JSON string of project content
+            artifact_type (str): Type of artifact to generate objections for
+
+        Returns:
+            str: JSON string of objections
+        """
+        content = self.parse_content(project_content)
+
+        # For this method, we'll just use generate_for_artifact
+        # with a dummy artifact content since that's what we actually want to use
+        dummy_artifact = {"type": artifact_type}
+        return self.generate_for_artifact(content, dummy_artifact, artifact_type)
+
     def generate_for_artifact(self, project_content, artifact_content, artifact_type):
         """
         Generate objections for a specific artifact.
