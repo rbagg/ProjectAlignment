@@ -94,6 +94,8 @@ Format as a JSON array of objection objects with:
 2. "explanation" - 1-2 sentence factual explanation
 3. "impact" - quantifiable business impact (when possible)
 
+Please respond with valid JSON only, in the following format. Do not include any additional text or explanations.
+
 Example format:
 [
     {

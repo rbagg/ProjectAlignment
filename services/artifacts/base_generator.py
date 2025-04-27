@@ -1,10 +1,10 @@
 # services/artifacts/base_generator.py
 import json
 import logging
+import requests
+import time
 from abc import ABC, abstractmethod
 from flask import current_app
-import anthropic
-from models import db
 
 class BaseGenerator(ABC):
     """
@@ -36,9 +36,9 @@ class BaseGenerator(ABC):
         """
         pass
 
-    def generate_with_claude(self, prompt, fallback_method, fallback_args=None):
+    def generate_with_claude_direct(self, prompt, fallback_method, fallback_args=None):
         """
-        Generate content using Claude with proper error handling.
+        Generate content using Claude API directly with requests instead of the SDK.
 
         Args:
             prompt (str): The prompt to send to Claude
@@ -51,57 +51,165 @@ class BaseGenerator(ABC):
         if fallback_args is None:
             fallback_args = {}
 
-        # Initialize Claude client
+        # Get configuration
         try:
             api_key = current_app.config.get('CLAUDE_API_KEY')
             model = current_app.config.get('CLAUDE_MODEL', 'claude-3-opus-20240229')
 
-            # Create client without extra parameters that might cause issues
-            client = anthropic.Anthropic(api_key=api_key)
-        except Exception as e:
-            self.logger.error(f"Error initializing Claude client: {str(e)}")
-            # Fall back to rule-based generation if Claude is unavailable
-            return fallback_method(**fallback_args)
-
-        try:
-            # Call Claude
-            response = client.messages.create(
-                model=model,
-                max_tokens=1500,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
-            )
-
-            # Extract and parse the response
-            response_text = response.content[0].text
-
-            # Find JSON in the response
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
-
-            # If we didn't find an object, look for an array
-            if json_start == -1 or json_end <= json_start:
-                json_start = response_text.find('[')
-                json_end = response_text.rfind(']') + 1
-
-            if json_start != -1 and json_end > json_start:
-                json_str = response_text[json_start:json_end]
-                try:
-                    # Validate JSON by parsing it
-                    result = json.loads(json_str)
-                    return json.dumps(result)
-                except json.JSONDecodeError as je:
-                    self.logger.error(f"Invalid JSON in Claude response: {str(je)}")
-                    return fallback_method(**fallback_args)
-            else:
-                self.logger.error("Could not find JSON in Claude response")
+            if not api_key:
+                self.logger.error("No Claude API key found in configuration")
                 return fallback_method(**fallback_args)
 
         except Exception as e:
-            self.logger.error(f"Error generating content with Claude: {str(e)}")
-            # Fall back to rule-based generation
+            self.logger.error(f"Error accessing configuration: {str(e)}")
             return fallback_method(**fallback_args)
+
+        # Setup request parameters
+        max_retries = 3
+        retry_delay = 2  # seconds
+
+        # Try to call Claude API
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    self.logger.info(f"Retrying Claude API call (attempt {attempt + 1}/{max_retries}) after {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+
+                response = requests.post(
+                    'https://api.anthropic.com/v1/messages',
+                    json={
+                        'model': model,
+                        'max_tokens': 1500,
+                        'messages': [{'role': 'user', 'content': prompt}]
+                    },
+                    headers={
+                        'x-api-key': api_key,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=30  # 30 second timeout
+                )
+
+                # Check for successful response
+                if response.status_code == 200:
+                    response_data = response.json()
+                    response_text = response_data.get('content', [{}])[0].get('text', '')
+
+                    print(response_text)
+
+                    # More robust JSON extraction using regex
+                    import re
+
+                    # Try to find JSON object first
+                    json_match = re.search(r'(\{.*\})', response_text, re.DOTALL)
+                    if json_match:
+                        json_str = json_match.group(1)
+                    else:
+                        # Try to find JSON array if no object found
+                        json_match = re.search(r'(\[.*\])', response_text, re.DOTALL)
+                        if json_match:
+                            json_str = json_match.group(1)
+                        else:
+                            self.logger.error("Could not find JSON in Claude response")
+                            if attempt == max_retries - 1:
+                                return fallback_method(**fallback_args)
+                            continue
+
+                    try:
+                        # Try to parse the JSON
+                        parsed = json.loads(json_str)
+                        return json.dumps(parsed)
+                    except json.JSONDecodeError as je:
+                        self.logger.error(f"Invalid JSON in Claude response: {str(je)}")
+
+                        # Try a more aggressive approach - find just the first valid JSON block
+                        try:
+                            # Log the response for debugging
+                            self.logger.debug(f"Response text: {response_text[:500]}")
+
+                            # Try to extract JSON more carefully
+                            for i, char in enumerate(response_text):
+                                if char in ['{', '[']:
+                                    # Found potential start of JSON
+                                    try:
+                                        # Try to parse from here to end
+                                        partial = response_text[i:]
+                                        # Count opening and closing brackets to find matching end
+                                        stack = []
+                                        in_string = False
+                                        escape_next = False
+
+                                        for j, c in enumerate(partial):
+                                            if escape_next:
+                                                escape_next = False
+                                                continue
+
+                                            if c == '\\':
+                                                escape_next = True
+                                                continue
+
+                                            if c == '"' and not escape_next:
+                                                in_string = not in_string
+                                                continue
+
+                                            if not in_string:
+                                                if c in ['{', '[']:
+                                                    stack.append(c)
+                                                elif c == '}' and stack and stack[-1] == '{':
+                                                    stack.pop()
+                                                    if not stack:
+                                                        # Found matching end
+                                                        json_str = partial[:j+1]
+                                                        parsed = json.loads(json_str)
+                                                        return json.dumps(parsed)
+                                                elif c == ']' and stack and stack[-1] == '[':
+                                                    stack.pop()
+                                                    if not stack:
+                                                        # Found matching end
+                                                        json_str = partial[:j+1]
+                                                        parsed = json.loads(json_str)
+                                                        return json.dumps(parsed)
+                                    except Exception as je2:
+                                        # Keep trying
+                                        continue
+
+                            # If we get here, we couldn't find valid JSON
+                            if attempt == max_retries - 1:
+                                return fallback_method(**fallback_args)
+                        except Exception as e2:
+                            self.logger.error(f"Error in aggressive JSON extraction: {str(e2)}")
+                            if attempt == max_retries - 1:
+                                return fallback_method(**fallback_args)
+                else:
+                    self.logger.error(f"Error from Claude API: {response.status_code} - {response.text}")
+                    if attempt == max_retries - 1:
+                        return fallback_method(**fallback_args)
+
+            except Exception as e:
+                self.logger.error(f"Error calling Claude API: {str(e)}")
+                if attempt == max_retries - 1:
+                    return fallback_method(**fallback_args)
+
+        # If we get here, all attempts failed
+        return fallback_method(**fallback_args)
+
+    def generate_with_claude(self, prompt, fallback_method, fallback_args=None):
+        """
+        Generate content using Claude with proper error handling.
+
+        This method is maintained for backward compatibility but now uses
+        the direct API approach instead of the SDK.
+
+        Args:
+            prompt (str): The prompt to send to Claude
+            fallback_method (callable): Method to call if Claude fails
+            fallback_args (dict, optional): Arguments to pass to fallback_method
+
+        Returns:
+            str: JSON string containing the generated content
+        """
+        return self.generate_with_claude_direct(prompt, fallback_method, fallback_args)
 
     def parse_content(self, content_json):
         """
