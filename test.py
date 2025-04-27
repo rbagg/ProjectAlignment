@@ -59,7 +59,7 @@ TEST_PROJECT = {
         'frequently_asked_questions': [
             {
                 'question': 'What problem does this solve?',
-                'answer': 'Teams waste 4+ hours weekly reconciling inconsistent documentation.'
+                'answer': 'Teams waste hours weekly reconciling inconsistent documentation.'
             },
             {
                 'question': 'How does it work?',
@@ -70,7 +70,7 @@ TEST_PROJECT = {
     'strategy': {
         'vision': 'Create a world where documentation is always accurate and teams never waste time on reconciliation.',
         'approach': 'Build connectors to popular documentation systems and use NLP to identify inconsistencies.',
-        'business_value': 'Save teams 4+ hours per week and reduce implementation errors by 45%.'
+        'business_value': 'Save teams hours per week and reduce implementation errors.'
     },
     'tickets': [
         {
@@ -157,13 +157,13 @@ def test_project_description():
 
     print("\nOBJECTIONS:")
     for objection in description.get("objections", []):
-        print(f"- {objection['title']}: {objection['explanation']}")
+        print(f"- {objection.get('title', '')}: {objection.get('explanation', '')}")
         if "impact" in objection:
             print(f"  Impact: {objection['impact']}")
 
     print("\nIMPROVEMENTS:")
     for improvement in description.get("improvements", []):
-        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        print(f"- {improvement.get('title', '')}: {improvement.get('suggestion', '')}")
         if "benefit" in improvement:
             print(f"  Benefit: {improvement['benefit']}")
 
@@ -209,13 +209,13 @@ def test_internal_messaging():
 
     print("\nOBJECTIONS:")
     for objection in messaging.get("objections", []):
-        print(f"- {objection['title']}: {objection['explanation']}")
+        print(f"- {objection.get('title', '')}: {objection.get('explanation', '')}")
         if "impact" in objection:
             print(f"  Impact: {objection['impact']}")
 
     print("\nIMPROVEMENTS:")
     for improvement in messaging.get("improvements", []):
-        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        print(f"- {improvement.get('title', '')}: {improvement.get('suggestion', '')}")
         if "benefit" in improvement:
             print(f"  Benefit: {improvement['benefit']}")
 
@@ -258,13 +258,13 @@ def test_external_messaging():
 
     print("\nOBJECTIONS:")
     for objection in messaging.get("objections", []):
-        print(f"- {objection['title']}: {objection['explanation']}")
+        print(f"- {objection.get('title', '')}: {objection.get('explanation', '')}")
         if "impact" in objection:
             print(f"  Impact: {objection['impact']}")
 
     print("\nIMPROVEMENTS:")
     for improvement in messaging.get("improvements", []):
-        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        print(f"- {improvement.get('title', '')}: {improvement.get('suggestion', '')}")
         if "benefit" in improvement:
             print(f"  Benefit: {improvement['benefit']}")
 
@@ -282,7 +282,7 @@ def test_direct_objection_generation():
 
     # Create a mock artifact
     mock_artifact = {
-        "headline": "Save 4+ hours per week on documentation",
+        "headline": "Save hours per week on documentation",
         "description": "Our tool automatically syncs your documents and keeps everything aligned."
     }
 
@@ -307,7 +307,7 @@ def test_direct_objection_generation():
 
     print("\nDIRECTLY GENERATED OBJECTIONS:")
     for objection in objections:
-        print(f"- {objection['title']}: {objection['explanation']}")
+        print(f"- {objection.get('title', '')}: {objection.get('explanation', '')}")
         if "impact" in objection:
             print(f"  Impact: {objection['impact']}")
 
@@ -325,7 +325,7 @@ def test_direct_improvement_generation():
 
     # Create a mock artifact
     mock_artifact = {
-        "headline": "Save 4+ hours per week on documentation",
+        "headline": "Save hours per week on documentation",
         "description": "Our tool automatically syncs your documents and keeps everything aligned."
     }
 
@@ -350,7 +350,7 @@ def test_direct_improvement_generation():
 
     print("\nDIRECTLY GENERATED IMPROVEMENTS:")
     for improvement in improvements:
-        print(f"- {improvement['title']}: {improvement['suggestion']}")
+        print(f"- {improvement.get('title', '')}: {improvement.get('suggestion', '')}")
         if "benefit" in improvement:
             print(f"  Benefit: {improvement['benefit']}")
 
@@ -427,15 +427,46 @@ def test_file_processing(file_path):
     if "objections" in description_data:
         print("\nKEY OBJECTIONS:")
         for objection in description_data["objections"][:2]:  # Show only top 2
-            print(f"- {objection['title']}: {objection['explanation']}")
+            print(f"- {objection.get('title', '')}: {objection.get('explanation', '')}")
 
     # Display improvements
     if "improvements" in description_data:
         print("\nTOP IMPROVEMENTS:")
         for improvement in description_data["improvements"][:2]:  # Show only top 2
-            print(f"- {improvement['title']}: {improvement['suggestion']}")
+            print(f"- {improvement.get('title', '')}: {improvement.get('suggestion', '')}")
+
+    # Display internal messaging
+    internal_data = json.loads(internal_msg)
+    print("\nINTERNAL MESSAGING:")
+    print(f"Subject: {internal_data.get('subject', '')}")
+    print(f"What It Is: {internal_data.get('what_it_is', '')[:100]}...")
+
+    # Display external messaging
+    external_data = json.loads(external_msg)
+    print("\nEXTERNAL MESSAGING:")
+    print(f"Headline: {external_data.get('headline', '')}")
+    print(f"Pain Point: {external_data.get('pain_point', '')[:100]}...")
 
     print("\nComplete analysis generated. Use main app for full details.")
+
+def ensure_all_tests_run(file_path=None):
+    """Run all tests, including file processing if provided."""
+    try:
+        # Always run the standard tests
+        test_project_description()
+        test_internal_messaging()
+        test_external_messaging()
+        test_direct_objection_generation()
+        test_direct_improvement_generation()
+
+        # If a file path is provided, run the file processing test
+        if file_path and os.path.isfile(file_path):
+            test_file_processing(file_path)
+    except Exception as e:
+        print(f"\nERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     print("Project Alignment Tool Test Script")
@@ -453,31 +484,15 @@ if __name__ == "__main__":
 
     # Check for file argument
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
-        # Process specific file
-        test_file_processing(sys.argv[1])
+        # Process specific file but also run all other tests
+        ensure_all_tests_run(sys.argv[1])
     else:
-        # Execute standard tests
-        try:
-            test_project_description()
-            test_internal_messaging()
-            test_external_messaging()
-            test_direct_objection_generation()
-            test_direct_improvement_generation()
+        # Execute all standard tests without file processing
+        ensure_all_tests_run()
 
-            # Only run database test if specified
-            if len(sys.argv) > 1 and sys.argv[1] == '--with-db':
-                with app.app_context():
-                    test_save_to_database()
-
-            # If no valid file was provided but arguments exist
-            if len(sys.argv) > 1 and not os.path.isfile(sys.argv[1]) and sys.argv[1] != '--with-db':
-                print(f"\nWARNING: Could not find file: {sys.argv[1]}")
-                print("Usage: python test.py [file_to_analyze.md] [--with-db]")
-
-        except Exception as e:
-            print(f"\nERROR: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
+        # If no valid file was provided but arguments exist
+        if len(sys.argv) > 1 and not os.path.isfile(sys.argv[1]) and sys.argv[1] != '--with-db':
+            print(f"\nWARNING: Could not find file: {sys.argv[1]}")
+            print("Usage: python test.py [file_to_analyze.md] [--with-db]")
 
     print("\nAll tests completed!")

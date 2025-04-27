@@ -3,6 +3,7 @@ import json
 import logging
 import requests
 import time
+import re
 from abc import ABC, abstractmethod
 from flask import current_app
 
@@ -36,6 +37,112 @@ class BaseGenerator(ABC):
         """
         pass
 
+    def extract_json_from_text(self, text):
+        """
+        Extract JSON from Claude's response text.
+
+        This method tries multiple approaches to find valid JSON in the text.
+
+        Args:
+            text (str): Response text that may contain JSON
+
+        Returns:
+            str: Valid JSON string if found, or None
+        """
+        # Try to find complete JSON array or object
+        # First look for array pattern
+        array_match = re.search(r'(\[\s*\{.*\}\s*\])', text, re.DOTALL)
+        if array_match:
+            try:
+                json_str = array_match.group(1)
+                # Validate by parsing it
+                json.loads(json_str)
+                return json_str
+            except json.JSONDecodeError:
+                self.logger.debug("Found array-like text but not valid JSON")
+
+        # Try to find object pattern
+        obj_match = re.search(r'(\{\s*".*"\s*:.*\})', text, re.DOTALL)
+        if obj_match:
+            try:
+                json_str = obj_match.group(1)
+                # Validate by parsing it
+                json.loads(json_str)
+                return json_str
+            except json.JSONDecodeError:
+                self.logger.debug("Found object-like text but not valid JSON")
+
+        # If direct regex didn't work, try to find JSON between triple backticks
+        code_block_match = re.search(r'```(?:json)?\s*(.+?)```', text, re.DOTALL)
+        if code_block_match:
+            try:
+                json_str = code_block_match.group(1).strip()
+                # Validate by parsing it
+                json.loads(json_str)
+                return json_str
+            except json.JSONDecodeError:
+                self.logger.debug("Found code block but not valid JSON")
+
+        # As a last resort, try a more complex approach by scanning for JSON start/end brackets
+        try:
+            # Find potential JSON start positions
+            start_positions = []
+            for i, char in enumerate(text):
+                if char in ['{', '[']:
+                    start_positions.append(i)
+
+            # Try each starting position
+            for start_pos in start_positions:
+                # Based on whether it starts with { or [, look for matching end
+                is_object = text[start_pos] == '{'
+                stack = [text[start_pos]]
+                in_string = False
+                escape_next = False
+
+                for i in range(start_pos + 1, len(text)):
+                    char = text[i]
+
+                    # Handle escape sequences
+                    if escape_next:
+                        escape_next = False
+                        continue
+                    if char == '\\':
+                        escape_next = True
+                        continue
+
+                    # Handle string literals
+                    if char == '"' and not escape_next:
+                        in_string = not in_string
+                        continue
+
+                    # Only process brackets outside of strings
+                    if not in_string:
+                        if char == '{' or char == '[':
+                            stack.append(char)
+                        elif char == '}' and stack and stack[-1] == '{':
+                            stack.pop()
+                            if not stack:  # Found complete JSON object
+                                json_str = text[start_pos:i+1]
+                                try:
+                                    json.loads(json_str)
+                                    return json_str
+                                except json.JSONDecodeError:
+                                    break  # Invalid JSON, try next starting position
+                        elif char == ']' and stack and stack[-1] == '[':
+                            stack.pop()
+                            if not stack:  # Found complete JSON array
+                                json_str = text[start_pos:i+1]
+                                try:
+                                    json.loads(json_str)
+                                    return json_str
+                                except json.JSONDecodeError:
+                                    break  # Invalid JSON, try next starting position
+        except Exception as e:
+            self.logger.error(f"Error in complex JSON extraction: {str(e)}")
+
+        self.logger.error("Could not extract valid JSON from text")
+        return None
+
     def generate_with_claude_direct(self, prompt, fallback_method, fallback_args=None):
         """
         Generate content using Claude API directly with requests instead of the SDK.
@@ -64,6 +171,16 @@ class BaseGenerator(ABC):
             self.logger.error(f"Error accessing configuration: {str(e)}")
             return fallback_method(**fallback_args)
 
+        # Add clear instructions for JSON output and no made-up statistics
+        enhanced_prompt = f"""
+{prompt}
+
+IMPORTANT:
+1. Respond ONLY with valid JSON. Do not include any explanatory text before or after the JSON.
+2. Do not make up any statistics or percentages. If you don't have real data, describe impacts in qualitative terms.
+3. The JSON should be properly formatted with no trailing commas or syntax errors.
+"""
+
         # Setup request parameters
         max_retries = 3
         retry_delay = 2  # seconds
@@ -81,7 +198,7 @@ class BaseGenerator(ABC):
                     json={
                         'model': model,
                         'max_tokens': 1500,
-                        'messages': [{'role': 'user', 'content': prompt}]
+                        'messages': [{'role': 'user', 'content': enhanced_prompt}]
                     },
                     headers={
                         'x-api-key': api_key,
@@ -96,89 +213,17 @@ class BaseGenerator(ABC):
                     response_data = response.json()
                     response_text = response_data.get('content', [{}])[0].get('text', '')
 
-                    print(response_text)
-
-                    # More robust JSON extraction using regex
-                    import re
-
-                    # Try to find JSON object first
-                    json_match = re.search(r'(\{.*\})', response_text, re.DOTALL)
-                    if json_match:
-                        json_str = json_match.group(1)
-                    else:
-                        # Try to find JSON array if no object found
-                        json_match = re.search(r'(\[.*\])', response_text, re.DOTALL)
-                        if json_match:
-                            json_str = json_match.group(1)
-                        else:
-                            self.logger.error("Could not find JSON in Claude response")
-                            if attempt == max_retries - 1:
-                                return fallback_method(**fallback_args)
-                            continue
-
+                    # Try to parse as JSON directly first
                     try:
-                        # Try to parse the JSON
-                        parsed = json.loads(json_str)
-                        return json.dumps(parsed)
-                    except json.JSONDecodeError as je:
-                        self.logger.error(f"Invalid JSON in Claude response: {str(je)}")
-
-                        # Try a more aggressive approach - find just the first valid JSON block
-                        try:
-                            # Log the response for debugging
-                            self.logger.debug(f"Response text: {response_text[:500]}")
-
-                            # Try to extract JSON more carefully
-                            for i, char in enumerate(response_text):
-                                if char in ['{', '[']:
-                                    # Found potential start of JSON
-                                    try:
-                                        # Try to parse from here to end
-                                        partial = response_text[i:]
-                                        # Count opening and closing brackets to find matching end
-                                        stack = []
-                                        in_string = False
-                                        escape_next = False
-
-                                        for j, c in enumerate(partial):
-                                            if escape_next:
-                                                escape_next = False
-                                                continue
-
-                                            if c == '\\':
-                                                escape_next = True
-                                                continue
-
-                                            if c == '"' and not escape_next:
-                                                in_string = not in_string
-                                                continue
-
-                                            if not in_string:
-                                                if c in ['{', '[']:
-                                                    stack.append(c)
-                                                elif c == '}' and stack and stack[-1] == '{':
-                                                    stack.pop()
-                                                    if not stack:
-                                                        # Found matching end
-                                                        json_str = partial[:j+1]
-                                                        parsed = json.loads(json_str)
-                                                        return json.dumps(parsed)
-                                                elif c == ']' and stack and stack[-1] == '[':
-                                                    stack.pop()
-                                                    if not stack:
-                                                        # Found matching end
-                                                        json_str = partial[:j+1]
-                                                        parsed = json.loads(json_str)
-                                                        return json.dumps(parsed)
-                                    except Exception as je2:
-                                        # Keep trying
-                                        continue
-
-                            # If we get here, we couldn't find valid JSON
-                            if attempt == max_retries - 1:
-                                return fallback_method(**fallback_args)
-                        except Exception as e2:
-                            self.logger.error(f"Error in aggressive JSON extraction: {str(e2)}")
+                        json_obj = json.loads(response_text)
+                        return json.dumps(json_obj)
+                    except json.JSONDecodeError:
+                        # If not valid JSON, try to extract JSON from the text
+                        json_str = self.extract_json_from_text(response_text)
+                        if json_str:
+                            return json_str
+                        else:
+                            self.logger.error("Could not find valid JSON in Claude response")
                             if attempt == max_retries - 1:
                                 return fallback_method(**fallback_args)
                 else:
@@ -247,6 +292,15 @@ class BaseGenerator(ABC):
         Returns:
             str: Formatted prompt following master structure
         """
+        # Add standard instructions about JSON and avoiding fake statistics to all prompts
+        standard_instructions = """
+VERY IMPORTANT INSTRUCTIONS:
+1. Provide ONLY valid JSON in your response. Do not include any explanatory text, instructions, or commentary.
+2. Do not make up statistics, percentages, or metrics. If you don't have real data, use qualitative descriptions instead.
+3. The JSON must be properly formatted with no trailing commas, unescaped quotes, or other syntax errors.
+4. Your response will be parsed directly as JSON, so it must strictly adhere to JSON syntax.
+"""
+
         prompt_parts = [
             f"# 1. Role & Identity Definition\n{role}",
             f"# 2. Context & Background\n{context}",
@@ -265,5 +319,7 @@ class BaseGenerator(ABC):
 
         if quality:
             prompt_parts.append(f"# 10. Quality Assurance\n{quality}")
+
+        prompt_parts.append(f"# 11. Special Instructions\n{standard_instructions}")
 
         return "\n\n".join(prompt_parts)
