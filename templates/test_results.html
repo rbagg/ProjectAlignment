@@ -2,249 +2,263 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="section">
-        <h2 class="section-title">Artifact Generation Results</h2>
-        <p><a href="{{ url_for('test_form') }}">&larr; Back to test form</a></p>
-
-        <div style="margin-top: 1rem;">
-            <h3>Input Content</h3>
-            <pre style="white-space: pre-wrap; background-color: #f5f5f5; padding: 1rem; overflow-x: auto;">{{ content[:500] }}{% if content|length > 500 %}...{% endif %}</pre>
+<div class="card">
+    <div class="card-header">
+        <h2>Artifact Generation Results</h2>
+        <a href="{{ url_for('test_form') }}" class="button">&larr; Back to test form</a>
+    </div>
+    <div class="card-content">
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Input Content</h2>
+            </div>
+            <div class="card-content">
+                <pre>{{ content[:500] }}{% if content|length > 500 %}...{% endif %}</pre>
+            </div>
         </div>
 
-        <div style="margin-top: 2rem;">
-            <h3>Project Description</h3>
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Project Description</h2>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Core Summary:</div>
+                    <ol>
+                        {% for sentence in description.three_sentences %}
+                            <li>{{ sentence }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
 
-            <div class="tech-section">
-                <div class="tech-label">Core Summary:</div>
-                <ol>
-                    {% for sentence in description.three_sentences %}
-                        <li>{{ sentence }}</li>
+                <div class="text-section">
+                    <div class="label">Detailed Description:</div>
+                    {% for paragraph in description.three_paragraphs %}
+                        <p>{{ paragraph }}</p>
                     {% endfor %}
-                </ol>
-            </div>
+                </div>
 
-            <div class="tech-section">
-                <div class="tech-label">Detailed Description:</div>
-                {% for paragraph in description.three_paragraphs %}
-                    <p>{{ paragraph }}</p>
-                {% endfor %}
-            </div>
+                <!-- Two column layout for objections and improvements -->
+                <div class="two-column">
+                    {% if description.objections %}
+                        <div>
+                            <h3>Critical Objections</h3>
+                            <ul class="objections">
+                                {% for objection in description.objections %}
+                                    <li>
+                                        <strong>{{ objection.title }}</strong>
+                                        <p>{{ objection.explanation }}</p>
+                                        {% if objection.impact %}
+                                        <span class="impact">Impact: {{ objection.impact }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
 
-            <!-- Two column layout for objections and improvements -->
-            <div class="two-column">
-                {% if description.objections %}
-                    <div>
-                        <h4>Critical Objections</h4>
-                        <ul class="objections">
-                            {% for objection in description.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-
-                {% if description.improvements %}
-                    <div>
-                        <h4>Improvement Suggestions</h4>
-                        <ul class="improvements">
-                            {% for improvement in description.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
+                    {% if description.improvements %}
+                        <div>
+                            <h3>Improvement Suggestions</h3>
+                            <ul class="improvements">
+                                {% for improvement in description.improvements %}
+                                    <li>
+                                        <strong>{{ improvement.title }}</strong>
+                                        <p>{{ improvement.suggestion }}</p>
+                                        {% if improvement.benefit %}
+                                        <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div style="margin-top: 2rem;">
-            <h3>Internal Messaging</h3>
-
-            <div class="tech-section">
-                <div class="tech-label">Subject:</div>
-                <p class="tech-content">{{ internal.subject }}</p>
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Internal Messaging</h2>
             </div>
-
-            {% if internal.what_it_is %}
-                <div class="tech-section">
-                    <div class="tech-label">What It Is:</div>
-                    <p class="tech-content">{{ internal.what_it_is }}</p>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Subject:</div>
+                    <div class="content">{{ internal.subject }}</div>
                 </div>
 
-                <div class="tech-section">
-                    <div class="tech-label">Customer Pain:</div>
-                    <p class="tech-content">{{ internal.customer_pain }}</p>
-                </div>
-
-                <div class="tech-section">
-                    <div class="tech-label">Our Solution:</div>
-                    <p class="tech-content">{{ internal.our_solution }}</p>
-                </div>
-
-                <div class="tech-section">
-                    <div class="tech-label">Business Impact:</div>
-                    <p class="tech-content">{{ internal.business_impact }}</p>
-                </div>
-
-                {% if internal.timeline %}
-                <div class="tech-section">
-                    <div class="tech-label">Timeline:</div>
-                    <p class="tech-content">{{ internal.timeline }}</p>
-                </div>
-                {% endif %}
-
-                {% if internal.team_needs %}
-                <div class="tech-section">
-                    <div class="tech-label">Team Needs:</div>
-                    <p class="tech-content">{{ internal.team_needs }}</p>
-                </div>
-                {% endif %}
-            {% elif internal.what_changed %}
-                <div class="tech-section">
-                    <div class="tech-label">What Changed:</div>
-                    <p class="tech-content">{{ internal.what_changed }}</p>
-                </div>
-
-                <div class="tech-section">
-                    <div class="tech-label">Customer Impact:</div>
-                    <p class="tech-content">{{ internal.customer_impact }}</p>
-                </div>
-
-                <div class="tech-section">
-                    <div class="tech-label">Business Impact:</div>
-                    <p class="tech-content">{{ internal.business_impact }}</p>
-                </div>
-
-                {% if internal.timeline_impact %}
-                <div class="tech-section">
-                    <div class="tech-label">Timeline Impact:</div>
-                    <p class="tech-content">{{ internal.timeline_impact }}</p>
-                </div>
-                {% endif %}
-
-                {% if internal.team_needs %}
-                <div class="tech-section">
-                    <div class="tech-label">Team Needs:</div>
-                    <p class="tech-content">{{ internal.team_needs }}</p>
-                </div>
-                {% endif %}
-            {% endif %}
-
-            <!-- Two column layout for objections and improvements -->
-            <div class="two-column">
-                {% if internal.objections %}
-                    <div>
-                        <h4>Critical Objections</h4>
-                        <ul class="objections">
-                            {% for objection in internal.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
+                {% if internal.what_it_is %}
+                    <div class="text-section">
+                        <div class="label">What It Is:</div>
+                        <div class="content">{{ internal.what_it_is }}</div>
                     </div>
+
+                    <div class="text-section">
+                        <div class="label">Customer Pain:</div>
+                        <div class="content">{{ internal.customer_pain }}</div>
+                    </div>
+
+                    <div class="text-section">
+                        <div class="label">Our Solution:</div>
+                        <div class="content">{{ internal.our_solution }}</div>
+                    </div>
+
+                    <div class="text-section">
+                        <div class="label">Business Impact:</div>
+                        <div class="content">{{ internal.business_impact }}</div>
+                    </div>
+
+                    {% if internal.timeline %}
+                    <div class="text-section">
+                        <div class="label">Timeline:</div>
+                        <div class="content">{{ internal.timeline }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if internal.team_needs %}
+                    <div class="text-section">
+                        <div class="label">Team Needs:</div>
+                        <div class="content">{{ internal.team_needs }}</div>
+                    </div>
+                    {% endif %}
+                {% elif internal.what_changed %}
+                    <div class="text-section">
+                        <div class="label">What Changed:</div>
+                        <div class="content">{{ internal.what_changed }}</div>
+                    </div>
+
+                    <div class="text-section">
+                        <div class="label">Customer Impact:</div>
+                        <div class="content">{{ internal.customer_impact }}</div>
+                    </div>
+
+                    <div class="text-section">
+                        <div class="label">Business Impact:</div>
+                        <div class="content">{{ internal.business_impact }}</div>
+                    </div>
+
+                    {% if internal.timeline_impact %}
+                    <div class="text-section">
+                        <div class="label">Timeline Impact:</div>
+                        <div class="content">{{ internal.timeline_impact }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if internal.team_needs %}
+                    <div class="text-section">
+                        <div class="label">Team Needs:</div>
+                        <div class="content">{{ internal.team_needs }}</div>
+                    </div>
+                    {% endif %}
                 {% endif %}
 
-                {% if internal.improvements %}
-                    <div>
-                        <h4>Improvement Suggestions</h4>
-                        <ul class="improvements">
-                            {% for improvement in internal.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
+                <!-- Two column layout for objections and improvements -->
+                <div class="two-column">
+                    {% if internal.objections %}
+                        <div>
+                            <h3>Critical Objections</h3>
+                            <ul class="objections">
+                                {% for objection in internal.objections %}
+                                    <li>
+                                        <strong>{{ objection.title }}</strong>
+                                        <p>{{ objection.explanation }}</p>
+                                        {% if objection.impact %}
+                                        <span class="impact">Impact: {{ objection.impact }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    {% if internal.improvements %}
+                        <div>
+                            <h3>Improvement Suggestions</h3>
+                            <ul class="improvements">
+                                {% for improvement in internal.improvements %}
+                                    <li>
+                                        <strong>{{ improvement.title }}</strong>
+                                        <p>{{ improvement.suggestion }}</p>
+                                        {% if improvement.benefit %}
+                                        <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
-        <div style="margin-top: 2rem;">
-            <h3>External Messaging</h3>
-
-            <div class="tech-section">
-                <div class="tech-label">Headline:</div>
-                <p class="tech-content"><strong>{{ external.headline }}</strong></p>
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>External Messaging</h2>
             </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Headline:</div>
+                    <div class="content"><strong>{{ external.headline }}</strong></div>
+                </div>
 
-            <div class="tech-section">
-                <div class="tech-label">Pain Point:</div>
-                <p class="tech-content">{{ external.pain_point }}</p>
-            </div>
+                <div class="text-section">
+                    <div class="label">Pain Point:</div>
+                    <div class="content">{{ external.pain_point }}</div>
+                </div>
 
-            <div class="tech-section">
-                <div class="tech-label">Solution:</div>
-                <p class="tech-content">{{ external.solution }}</p>
-            </div>
+                <div class="text-section">
+                    <div class="label">Solution:</div>
+                    <div class="content">{{ external.solution }}</div>
+                </div>
 
-            {% if external.benefits %}
-            <div class="tech-section">
-                <div class="tech-label">Benefits:</div>
-                <p class="tech-content">{{ external.benefits }}</p>
-            </div>
-            {% endif %}
-
-            <div class="tech-section">
-                <div class="tech-label">Call to Action:</div>
-                <p class="tech-content">{{ external.call_to_action }}</p>
-            </div>
-
-            <!-- Two column layout for objections and improvements -->
-            <div class="two-column">
-                {% if external.objections %}
-                    <div>
-                        <h4>Critical Objections</h4>
-                        <ul class="objections">
-                            {% for objection in external.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
+                {% if external.benefits %}
+                <div class="text-section">
+                    <div class="label">Benefits:</div>
+                    <div class="content">{{ external.benefits }}</div>
+                </div>
                 {% endif %}
 
-                {% if external.improvements %}
-                    <div>
-                        <h4>Improvement Suggestions</h4>
-                        <ul class="improvements">
-                            {% for improvement in external.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
+                <div class="text-section">
+                    <div class="label">Call to Action:</div>
+                    <div class="content">{{ external.call_to_action }}</div>
+                </div>
+
+                <!-- Two column layout for objections and improvements -->
+                <div class="two-column">
+                    {% if external.objections %}
+                        <div>
+                            <h3>Critical Objections</h3>
+                            <ul class="objections">
+                                {% for objection in external.objections %}
+                                    <li>
+                                        <strong>{{ objection.title }}</strong>
+                                        <p>{{ objection.explanation }}</p>
+                                        {% if objection.impact %}
+                                        <span class="impact">Impact: {{ objection.impact }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    {% if external.improvements %}
+                        <div>
+                            <h3>Improvement Suggestions</h3>
+                            <ul class="improvements">
+                                {% for improvement in external.improvements %}
+                                    <li>
+                                        <strong>{{ improvement.title }}</strong>
+                                        <p>{{ improvement.suggestion }}</p>
+                                        {% if improvement.benefit %}
+                                        <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

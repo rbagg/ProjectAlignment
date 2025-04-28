@@ -1,0 +1,274 @@
+<!-- templates/test_examples.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Generator Examples</h2>
+    </div>
+    <div class="card-content">
+        <p>This page shows examples of all generators in the Project Alignment Tool. These examples demonstrate the core functionality that makes the tool valuable.</p>
+
+        <!-- Project Description Generator -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Project Description Generator</h2>
+                <a href="{{ url_for('refresh_examples') }}" class="button">Refresh Examples</a>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Three Sentences:</div>
+                    <ol>
+                        {% for sentence in example_data.description.three_sentences %}
+                            <li>{{ sentence }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Three Paragraphs:</div>
+                    {% for paragraph in example_data.description.three_paragraphs %}
+                        <p>{{ paragraph }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <h3>Objections</h3>
+                        <ul class="objections">
+                            {% for objection in example_data.description.objections %}
+                                <li>
+                                    <strong>{{ objection.title }}</strong>
+                                    <p>{{ objection.explanation }}</p>
+                                    {% if objection.impact %}
+                                    <span class="impact">Impact: {{ objection.impact }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3>Improvements</h3>
+                        <ul class="improvements">
+                            {% for improvement in example_data.description.improvements %}
+                                <li>
+                                    <strong>{{ improvement.title }}</strong>
+                                    <p>{{ improvement.suggestion }}</p>
+                                    {% if improvement.benefit %}
+                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Internal Messaging Generator -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Internal Messaging Generator</h2>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Subject:</div>
+                    <div class="content">{{ example_data.internal.subject }}</div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">What It Is:</div>
+                    <div class="content">{{ example_data.internal.what_it_is }}</div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Customer Pain:</div>
+                    <div class="content">{{ example_data.internal.customer_pain }}</div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Our Solution:</div>
+                    <div class="content">{{ example_data.internal.our_solution }}</div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Business Impact:</div>
+                    <div class="content">{{ example_data.internal.business_impact }}</div>
+                </div>
+
+                {% if example_data.internal.timeline %}
+                <div class="text-section">
+                    <div class="label">Timeline:</div>
+                    <div class="content">{{ example_data.internal.timeline }}</div>
+                </div>
+                {% endif %}
+
+                {% if example_data.internal.team_needs %}
+                <div class="text-section">
+                    <div class="label">Team Needs:</div>
+                    <div class="content">{{ example_data.internal.team_needs }}</div>
+                </div>
+                {% endif %}
+
+                <div class="two-column">
+                    <div>
+                        <h3>Objections</h3>
+                        <ul class="objections">
+                            {% for objection in example_data.internal.objections %}
+                                <li>
+                                    <strong>{{ objection.title }}</strong>
+                                    <p>{{ objection.explanation }}</p>
+                                    {% if objection.impact %}
+                                    <span class="impact">Impact: {{ objection.impact }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3>Improvements</h3>
+                        <ul class="improvements">
+                            {% for improvement in example_data.internal.improvements %}
+                                <li>
+                                    <strong>{{ improvement.title }}</strong>
+                                    <p>{{ improvement.suggestion }}</p>
+                                    {% if improvement.benefit %}
+                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- External Messaging Generator -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>External Messaging Generator</h2>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Headline:</div>
+                    <div class="content"><strong>{{ example_data.external.headline }}</strong></div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Pain Point:</div>
+                    <div class="content">{{ example_data.external.pain_point }}</div>
+                </div>
+
+                <div class="text-section">
+                    <div class="label">Solution:</div>
+                    <div class="content">{{ example_data.external.solution }}</div>
+                </div>
+
+                {% if example_data.external.benefits %}
+                <div class="text-section">
+                    <div class="label">Benefits:</div>
+                    <div class="content">{{ example_data.external.benefits }}</div>
+                </div>
+                {% endif %}
+
+                <div class="text-section">
+                    <div class="label">Call to Action:</div>
+                    <div class="content">{{ example_data.external.call_to_action }}</div>
+                </div>
+
+                <div class="two-column">
+                    <div>
+                        <h3>Objections</h3>
+                        <ul class="objections">
+                            {% for objection in example_data.external.objections %}
+                                <li>
+                                    <strong>{{ objection.title }}</strong>
+                                    <p>{{ objection.explanation }}</p>
+                                    {% if objection.impact %}
+                                    <span class="impact">Impact: {{ objection.impact }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3>Improvements</h3>
+                        <ul class="improvements">
+                            {% for improvement in example_data.external.improvements %}
+                                <li>
+                                    <strong>{{ improvement.title }}</strong>
+                                    <p>{{ improvement.suggestion }}</p>
+                                    {% if improvement.benefit %}
+                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direct Objection Generator -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Direct Objection Generator</h2>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Input Artifact:</div>
+                    <div class="content">
+                        <strong>Headline:</strong> {{ example_data.objection_input.headline }}<br>
+                        <strong>Description:</strong> {{ example_data.objection_input.description }}
+                    </div>
+                </div>
+
+                <h3>Generated Objections</h3>
+                <ul class="objections">
+                    {% for objection in example_data.direct_objections %}
+                        <li>
+                            <strong>{{ objection.title }}</strong>
+                            <p>{{ objection.explanation }}</p>
+                            {% if objection.impact %}
+                            <span class="impact">Impact: {{ objection.impact }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Direct Improvement Generator -->
+        <div class="card" style="margin-top: 20px;">
+            <div class="card-header">
+                <h2>Direct Improvement Generator</h2>
+            </div>
+            <div class="card-content">
+                <div class="text-section">
+                    <div class="label">Input Artifact:</div>
+                    <div class="content">
+                        <strong>Headline:</strong> {{ example_data.improvement_input.headline }}<br>
+                        <strong>Description:</strong> {{ example_data.improvement_input.description }}
+                    </div>
+                </div>
+
+                <h3>Generated Improvements</h3>
+                <ul class="improvements">
+                    {% for improvement in example_data.direct_improvements %}
+                        <li>
+                            <strong>{{ improvement.title }}</strong>
+                            <p>{{ improvement.suggestion }}</p>
+                            {% if improvement.benefit %}
+                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,283 +2,311 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div class="container">
-        <div class="section">
-            <h2 class="section-title">Project Status</h2>
+    <div class="card">
+        <div class="card-header">
+            <h2>Project Dashboard</h2>
             {% if project %}
-                <h3>{{ project.name }}</h3>
-
-                <h4>Project Description</h4>
-                {% if artifacts.description %}
-                    <div class="tech-section">
-                        <div class="tech-label">Core Summary:</div>
-                        <ol>
-                            {% for sentence in artifacts.description.three_sentences %}
-                                <li>{{ sentence }}</li>
-                            {% endfor %}
-                        </ol>
-                    </div>
-
-                    <div class="tech-section">
-                        <div class="tech-label">Detailed Description:</div>
-                        {% for paragraph in artifacts.description.three_paragraphs %}
-                            <p>{{ paragraph }}</p>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <p>No description generated yet.</p>
-                {% endif %}
-
                 <form action="{{ url_for('update') }}" method="post">
-                    <button type="submit">Update Project</button>
+                    <button type="submit" class="button">Update Project</button>
                 </form>
-            {% else %}
-                <p>No project connected yet. <a href="{{ url_for('setup') }}">Set up a project</a></p>
             {% endif %}
         </div>
 
-        {% if project %}
-            <div class="section">
-                <h2 class="section-title">Alignment Suggestions</h2>
-                {% if suggestions %}
-                    <ul>
-                        {% for suggestion in suggestions %}
-                            <li>
-                                <strong>{{ suggestion.description }}</strong><br>
-                                <small>Source: {{ suggestion.source }} → Target: {{ suggestion.target }}</small>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No alignment suggestions at this time.</p>
-                {% endif %}
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">Internal Messaging</h2>
-                {% if artifacts.internal %}
-                    <div class="tech-section">
-                        <div class="tech-label">Subject:</div>
-                        <p class="tech-content">{{ artifacts.internal.subject }}</p>
+        <div class="card-content">
+            {% if project %}
+                <!-- Project Description -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h2>Project Description</h2>
                     </div>
+                    <div class="card-content">
+                        {% if artifacts.description %}
+                            <div class="text-section">
+                                <div class="label">Core Summary:</div>
+                                <ol>
+                                    {% for sentence in artifacts.description.three_sentences %}
+                                        <li>{{ sentence }}</li>
+                                    {% endfor %}
+                                </ol>
+                            </div>
 
-                    {% if artifacts.internal.what_it_is %}
-                        <div class="tech-section">
-                            <div class="tech-label">What It Is:</div>
-                            <p class="tech-content">{{ artifacts.internal.what_it_is }}</p>
-                        </div>
-
-                        <div class="tech-section">
-                            <div class="tech-label">Customer Pain:</div>
-                            <p class="tech-content">{{ artifacts.internal.customer_pain }}</p>
-                        </div>
-
-                        <div class="tech-section">
-                            <div class="tech-label">Our Solution:</div>
-                            <p class="tech-content">{{ artifacts.internal.our_solution }}</p>
-                        </div>
-
-                        <div class="tech-section">
-                            <div class="tech-label">Business Impact:</div>
-                            <p class="tech-content">{{ artifacts.internal.business_impact }}</p>
-                        </div>
-
-                        {% if artifacts.internal.timeline %}
-                        <div class="tech-section">
-                            <div class="tech-label">Timeline:</div>
-                            <p class="tech-content">{{ artifacts.internal.timeline }}</p>
-                        </div>
+                            <div class="text-section">
+                                <div class="label">Detailed Description:</div>
+                                {% for paragraph in artifacts.description.three_paragraphs %}
+                                    <p>{{ paragraph }}</p>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p>No description generated yet.</p>
                         {% endif %}
-
-                        {% if artifacts.internal.team_needs %}
-                        <div class="tech-section">
-                            <div class="tech-label">Team Needs:</div>
-                            <p class="tech-content">{{ artifacts.internal.team_needs }}</p>
-                        </div>
-                        {% endif %}
-                    {% elif artifacts.internal.what_changed %}
-                        <div class="tech-section">
-                            <div class="tech-label">What Changed:</div>
-                            <p class="tech-content">{{ artifacts.internal.what_changed }}</p>
-                        </div>
-
-                        <div class="tech-section">
-                            <div class="tech-label">Customer Impact:</div>
-                            <p class="tech-content">{{ artifacts.internal.customer_impact }}</p>
-                        </div>
-
-                        <div class="tech-section">
-                            <div class="tech-label">Business Impact:</div>
-                            <p class="tech-content">{{ artifacts.internal.business_impact }}</p>
-                        </div>
-
-                        {% if artifacts.internal.timeline_impact %}
-                        <div class="tech-section">
-                            <div class="tech-label">Timeline Impact:</div>
-                            <p class="tech-content">{{ artifacts.internal.timeline_impact }}</p>
-                        </div>
-                        {% endif %}
-
-                        {% if artifacts.internal.team_needs %}
-                        <div class="tech-section">
-                            <div class="tech-label">Team Needs:</div>
-                            <p class="tech-content">{{ artifacts.internal.team_needs }}</p>
-                        </div>
-                        {% endif %}
-                    {% endif %}
-                {% else %}
-                    <p>No internal messaging generated yet.</p>
-                {% endif %}
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">External Messaging</h2>
-                {% if artifacts.external %}
-                    <div class="tech-section">
-                        <div class="tech-label">Headline:</div>
-                        <p class="tech-content"><strong>{{ artifacts.external.headline }}</strong></p>
                     </div>
-
-                    <div class="tech-section">
-                        <div class="tech-label">Pain Point:</div>
-                        <p class="tech-content">{{ artifacts.external.pain_point }}</p>
-                    </div>
-
-                    <div class="tech-section">
-                        <div class="tech-label">Solution:</div>
-                        <p class="tech-content">{{ artifacts.external.solution }}</p>
-                    </div>
-
-                    {% if artifacts.external.benefits %}
-                    <div class="tech-section">
-                        <div class="tech-label">Benefits:</div>
-                        <p class="tech-content">{{ artifacts.external.benefits }}</p>
-                    </div>
-                    {% endif %}
-
-                    <div class="tech-section">
-                        <div class="tech-label">Call to Action:</div>
-                        <p class="tech-content">{{ artifacts.external.call_to_action }}</p>
-                    </div>
-                {% else %}
-                    <p>No external messaging generated yet.</p>
-                {% endif %}
-            </div>
-
-            <!-- Two column layout for objections and improvements -->
-            <div class="two-column">
-                <!-- Critical Objections Section -->
-                <div class="section">
-                    <h2 class="section-title">Critical Objections</h2>
-
-                    {% if artifacts.description and artifacts.description.objections %}
-                        <h3>Project Description Objections</h3>
-                        <ul class="objections">
-                            {% for objection in artifacts.description.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if artifacts.internal and artifacts.internal.objections %}
-                        <h3>Internal Messaging Objections</h3>
-                        <ul class="objections">
-                            {% for objection in artifacts.internal.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if artifacts.external and artifacts.external.objections %}
-                        <h3>External Messaging Objections</h3>
-                        <ul class="objections">
-                            {% for objection in artifacts.external.objections %}
-                                <li>
-                                    <strong>{{ objection.title }}</strong>
-                                    <p>{{ objection.explanation }}</p>
-                                    {% if objection.impact %}
-                                    <span class="impact">Impact: {{ objection.impact }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if not (artifacts.description and artifacts.description.objections) and 
-                           not (artifacts.internal and artifacts.internal.objections) and 
-                           not (artifacts.external and artifacts.external.objections) %}
-                        <p>No objections generated yet.</p>
-                    {% endif %}
                 </div>
 
-                <!-- Improvement Suggestions Section -->
-                <div class="section">
-                    <h2 class="section-title">Improvement Suggestions</h2>
-
-                    {% if artifacts.description and artifacts.description.improvements %}
-                        <h3>Project Description Improvements</h3>
-                        <ul class="improvements">
-                            {% for improvement in artifacts.description.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if artifacts.internal and artifacts.internal.improvements %}
-                        <h3>Internal Messaging Improvements</h3>
-                        <ul class="improvements">
-                            {% for improvement in artifacts.internal.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if artifacts.external and artifacts.external.improvements %}
-                        <h3>External Messaging Improvements</h3>
-                        <ul class="improvements">
-                            {% for improvement in artifacts.external.improvements %}
-                                <li>
-                                    <strong>{{ improvement.title }}</strong>
-                                    <p>{{ improvement.suggestion }}</p>
-                                    {% if improvement.benefit %}
-                                    <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-
-                    {% if not (artifacts.description and artifacts.description.improvements) and 
-                           not (artifacts.internal and artifacts.internal.improvements) and 
-                           not (artifacts.external and artifacts.external.improvements) %}
-                        <p>No improvements generated yet.</p>
-                    {% endif %}
+                <!-- Alignment Suggestions -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h2>Alignment Suggestions</h2>
+                    </div>
+                    <div class="card-content">
+                        {% if suggestions %}
+                            <ul>
+                                {% for suggestion in suggestions %}
+                                    <li>
+                                        <strong>{{ suggestion.description }}</strong><br>
+                                        <small>Source: {{ suggestion.source }} → Target: {{ suggestion.target }}</small>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p>No alignment suggestions at this time.</p>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-        {% endif %}
+
+                <!-- Internal Messaging -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h2>Internal Messaging</h2>
+                    </div>
+                    <div class="card-content">
+                        {% if artifacts.internal %}
+                            <div class="text-section">
+                                <div class="label">Subject:</div>
+                                <div class="content">{{ artifacts.internal.subject }}</div>
+                            </div>
+
+                            {% if artifacts.internal.what_it_is %}
+                                <div class="text-section">
+                                    <div class="label">Team Needs:</div>
+                                    <div class="content">{{ artifacts.internal.team_needs }}</div>
+                                </div>
+                                {% endif %}
+                            {% elif artifacts.internal.what_changed %}
+                                <div class="text-section">
+                                    <div class="label">What Changed:</div>
+                                    <div class="content">{{ artifacts.internal.what_changed }}</div>
+                                </div>
+
+                                <div class="text-section">
+                                    <div class="label">Customer Impact:</div>
+                                    <div class="content">{{ artifacts.internal.customer_impact }}</div>
+                                </div>
+
+                                <div class="text-section">
+                                    <div class="label">Business Impact:</div>
+                                    <div class="content">{{ artifacts.internal.business_impact }}</div>
+                                </div>
+
+                                {% if artifacts.internal.timeline_impact %}
+                                <div class="text-section">
+                                    <div class="label">Timeline Impact:</div>
+                                    <div class="content">{{ artifacts.internal.timeline_impact }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if artifacts.internal.team_needs %}
+                                <div class="text-section">
+                                    <div class="label">Team Needs:</div>
+                                    <div class="content">{{ artifacts.internal.team_needs }}</div>
+                                </div>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <p>No internal messaging generated yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- External Messaging -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h2>External Messaging</h2>
+                    </div>
+                    <div class="card-content">
+                        {% if artifacts.external %}
+                            <div class="text-section">
+                                <div class="label">Headline:</div>
+                                <div class="content"><strong>{{ artifacts.external.headline }}</strong></div>
+                            </div>
+
+                            <div class="text-section">
+                                <div class="label">Pain Point:</div>
+                                <div class="content">{{ artifacts.external.pain_point }}</div>
+                            </div>
+
+                            <div class="text-section">
+                                <div class="label">Solution:</div>
+                                <div class="content">{{ artifacts.external.solution }}</div>
+                            </div>
+
+                            {% if artifacts.external.benefits %}
+                            <div class="text-section">
+                                <div class="label">Benefits:</div>
+                                <div class="content">{{ artifacts.external.benefits }}</div>
+                            </div>
+                            {% endif %}
+
+                            <div class="text-section">
+                                <div class="label">Call to Action:</div>
+                                <div class="content">{{ artifacts.external.call_to_action }}</div>
+                            </div>
+                        {% else %}
+                            <p>No external messaging generated yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Two column layout for objections and improvements -->
+                <div class="two-column" style="margin-top: 20px;">
+                    <!-- Critical Objections Section -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Critical Objections</h2>
+                        </div>
+                        <div class="card-content">
+                            {% if artifacts.description and artifacts.description.objections %}
+                                <h3>Project Description Objections</h3>
+                                <ul class="objections">
+                                    {% for objection in artifacts.description.objections %}
+                                        <li>
+                                            <strong>{{ objection.title }}</strong>
+                                            <p>{{ objection.explanation }}</p>
+                                            {% if objection.impact %}
+                                            <span class="impact">Impact: {{ objection.impact }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if artifacts.internal and artifacts.internal.objections %}
+                                <h3>Internal Messaging Objections</h3>
+                                <ul class="objections">
+                                    {% for objection in artifacts.internal.objections %}
+                                        <li>
+                                            <strong>{{ objection.title }}</strong>
+                                            <p>{{ objection.explanation }}</p>
+                                            {% if objection.impact %}
+                                            <span class="impact">Impact: {{ objection.impact }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if artifacts.external and artifacts.external.objections %}
+                                <h3>External Messaging Objections</h3>
+                                <ul class="objections">
+                                    {% for objection in artifacts.external.objections %}
+                                        <li>
+                                            <strong>{{ objection.title }}</strong>
+                                            <p>{{ objection.explanation }}</p>
+                                            {% if objection.impact %}
+                                            <span class="impact">Impact: {{ objection.impact }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if not (artifacts.description and artifacts.description.objections) and 
+                                not (artifacts.internal and artifacts.internal.objections) and 
+                                not (artifacts.external and artifacts.external.objections) %}
+                                <p>No objections generated yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Improvement Suggestions Section -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Improvement Suggestions</h2>
+                        </div>
+                        <div class="card-content">
+                            {% if artifacts.description and artifacts.description.improvements %}
+                                <h3>Project Description Improvements</h3>
+                                <ul class="improvements">
+                                    {% for improvement in artifacts.description.improvements %}
+                                        <li>
+                                            <strong>{{ improvement.title }}</strong>
+                                            <p>{{ improvement.suggestion }}</p>
+                                            {% if improvement.benefit %}
+                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if artifacts.internal and artifacts.internal.improvements %}
+                                <h3>Internal Messaging Improvements</h3>
+                                <ul class="improvements">
+                                    {% for improvement in artifacts.internal.improvements %}
+                                        <li>
+                                            <strong>{{ improvement.title }}</strong>
+                                            <p>{{ improvement.suggestion }}</p>
+                                            {% if improvement.benefit %}
+                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if artifacts.external and artifacts.external.improvements %}
+                                <h3>External Messaging Improvements</h3>
+                                <ul class="improvements">
+                                    {% for improvement in artifacts.external.improvements %}
+                                        <li>
+                                            <strong>{{ improvement.title }}</strong>
+                                            <p>{{ improvement.suggestion }}</p>
+                                            {% if improvement.benefit %}
+                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+
+                            {% if not (artifacts.description and artifacts.description.improvements) and 
+                                not (artifacts.internal and artifacts.internal.improvements) and 
+                                not (artifacts.external and artifacts.external.improvements) %}
+                                <p>No improvements generated yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p>No project connected yet. <a href="{{ url_for('setup') }}" class="button">Set up a project</a></p>
+            {% endif %}
+        </div>
     </div>
-{% endblock %}
+{% endblock %}section">
+                                    <div class="label">What It Is:</div>
+                                    <div class="content">{{ artifacts.internal.what_it_is }}</div>
+                                </div>
+
+                                <div class="text-section">
+                                    <div class="label">Customer Pain:</div>
+                                    <div class="content">{{ artifacts.internal.customer_pain }}</div>
+                                </div>
+
+                                <div class="text-section">
+                                    <div class="label">Our Solution:</div>
+                                    <div class="content">{{ artifacts.internal.our_solution }}</div>
+                                </div>
+
+                                <div class="text-section">
+                                    <div class="label">Business Impact:</div>
+                                    <div class="content">{{ artifacts.internal.business_impact }}</div>
+                                </div>
+
+                                {% if artifacts.internal.timeline %}
+                                <div class="text-section">
+                                    <div class="label">Timeline:</div>
+                                    <div class="content">{{ artifacts.internal.timeline }}</div>
+                                </div>
+                                {% endif %}
+
+                                {% if artifacts.internal.team_needs %}
+                                <div class="text-

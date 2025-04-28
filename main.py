@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, current_app, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -475,6 +475,174 @@ def api_improvements():
         'external_improvements': [],
         'timestamp': None
     })
+
+@app.route('/examples')
+def test_examples():
+    """Display examples of all generators"""
+    # Try to get cached examples from session
+    example_data = session.get('example_data')
+
+    # If no examples in session, generate them
+    if not example_data:
+        example_data = generate_examples()
+        session['example_data'] = example_data
+
+    return render_template('test_examples.html', example_data=example_data)
+
+@app.route('/examples/refresh')
+def refresh_examples():
+    """Regenerate examples"""
+    # Clear any cached examples
+    if 'example_data' in session:
+        session.pop('example_data')
+
+    # Generate fresh examples
+    example_data = generate_examples()
+    session['example_data'] = example_data
+
+    flash('Examples refreshed successfully!', 'success')
+    return redirect(url_for('test_examples'))
+
+def generate_examples():
+    """Generate examples using all generators"""
+    # Use the test project data
+    test_project = {
+        'prd': {
+            'name': 'Document Sync Tool',
+            'overview': 'A tool that synchronizes documentation across different systems and keeps everything in alignment.',
+            'problem_statement': 'Teams waste hours reconciling inconsistent documentation across different systems, leading to errors and delays.',
+            'solution': 'We automatically monitor document changes and suggest updates to maintain alignment across all connected documents.'
+        },
+        'prfaq': {
+            'press_release': 'Announcing Document Sync Tool: End the document alignment nightmare once and for all.',
+            'frequently_asked_questions': [
+                {
+                    'question': 'What problem does this solve?',
+                    'answer': 'Teams waste hours weekly reconciling inconsistent documentation.'
+                },
+                {
+                    'question': 'How does it work?',
+                    'answer': 'We connect to your documentation systems and monitor changes, then suggest updates to maintain alignment.'
+                }
+            ]
+        },
+        'strategy': {
+            'vision': 'Create a world where documentation is always accurate and teams never waste time on reconciliation.',
+            'approach': 'Build connectors to popular documentation systems and use NLP to identify inconsistencies.',
+            'business_value': 'Save teams hours per week and reduce implementation errors.'
+        },
+        'tickets': [
+            {
+                'id': 'SYNC-1',
+                'title': 'Implement document connector system',
+                'status': 'In Progress'
+            },
+            {
+                'id': 'SYNC-2',
+                'title': 'Build inconsistency detection engine',
+                'status': 'To Do'
+            },
+            {
+                'id': 'SYNC-3',
+                'title': 'Create update suggestion system',
+                'status': 'To Do'
+            }
+        ]
+    }
+
+    # Convert to JSON
+    project_content = json.dumps(test_project)
+
+    try:
+        # Initialize generators
+        desc_generator = ProjectDescriptionGenerator()
+        internal_generator = InternalMessagingGenerator()
+        external_generator = ExternalMessagingGenerator()
+        objection_generator = ObjectionGenerator()
+        improvement_generator = ImprovementGenerator()
+
+        # Generate artifacts
+        description_json = desc_generator.generate(project_content)
+        internal_json = internal_generator.generate(project_content)
+        external_json = external_generator.generate(project_content)
+
+        # Mock artifact for direct generators
+        mock_artifact = {
+            "headline": "Save hours per week on documentation",
+            "description": "Our tool automatically syncs your documents and keeps everything aligned."
+        }
+
+        # Generate direct objections and improvements
+        direct_objections_json = objection_generator.generate_for_artifact(
+            json.loads(project_content), 
+            mock_artifact, 
+            'external'
+        )
+
+        direct_improvements_json = improvement_generator.generate_for_artifact(
+            json.loads(project_content), 
+            mock_artifact, 
+            'external'
+        )
+
+        # Parse results
+        description = json.loads(description_json)
+        internal = json.loads(internal_json)
+        external = json.loads(external_json)
+        direct_objections = json.loads(direct_objections_json)
+        direct_improvements = json.loads(direct_improvements_json)
+
+        # Compile all example data
+        example_data = {
+            'description': description,
+            'internal': internal,
+            'external': external,
+            'direct_objections': direct_objections,
+            'direct_improvements': direct_improvements,
+            'objection_input': mock_artifact,
+            'improvement_input': mock_artifact
+        }
+
+        return example_data
+
+    except Exception as e:
+        logger.error(f"Error generating examples: {str(e)}")
+        # Return minimal example data in case of error
+        return {
+            'description': {
+                'three_sentences': ['Example sentence 1', 'Example sentence 2', 'Example sentence 3'],
+                'three_paragraphs': ['Example paragraph 1', 'Example paragraph 2', 'Example paragraph 3'],
+                'objections': [],
+                'improvements': []
+            },
+            'internal': {
+                'subject': 'Example subject',
+                'what_it_is': 'Example description',
+                'customer_pain': 'Example pain point',
+                'our_solution': 'Example solution',
+                'business_impact': 'Example impact',
+                'objections': [],
+                'improvements': []
+            },
+            'external': {
+                'headline': 'Example headline',
+                'pain_point': 'Example pain point',
+                'solution': 'Example solution',
+                'call_to_action': 'Example CTA',
+                'objections': [],
+                'improvements': []
+            },
+            'direct_objections': [],
+            'direct_improvements': [],
+            'objection_input': {
+                'headline': 'Example headline',
+                'description': 'Example description'
+            },
+            'improvement_input': {
+                'headline': 'Example headline',
+                'description': 'Example description'
+            }
+        }
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
