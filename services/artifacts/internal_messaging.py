@@ -6,6 +6,7 @@ from flask import current_app
 from .base_generator import BaseGenerator
 from .objection_generator import ObjectionGenerator
 from .improvement_generator import ImprovementGenerator
+from prompts import get_prompt
 
 class InternalMessagingGenerator(BaseGenerator):
     """
@@ -52,11 +53,16 @@ class InternalMessagingGenerator(BaseGenerator):
         # Format content for Claude
         context = self._format_context(content, changes)
 
-        # Create prompt based on whether we're generating for the whole project or changes
+        # Extract project name for use in the prompt
+        project_name = content.get('prd', {}).get('name', 'Project Alignment Tool')
+
+        # Get the appropriate prompt from the centralized prompt system
         if not changes:
-            prompt = self._create_project_prompt(context)
+            # Get the internal messaging prompt with project_name parameter
+            prompt = get_prompt('internal_messaging', context, project_name=project_name)
         else:
-            prompt = self._create_changes_prompt(context, changes)
+            # Get the internal changes prompt with project_name parameter
+            prompt = get_prompt('internal_changes', context, changes=json.dumps(changes), project_name=project_name)
 
         # Generate messaging
         messaging_json = self.generate_with_claude(
@@ -81,265 +87,6 @@ class InternalMessagingGenerator(BaseGenerator):
         messaging['improvements'] = self.parse_content(improvements_json)
 
         return json.dumps(messaging)
-
-    def _create_project_prompt(self, context):
-        """Create prompt for generating messaging for the entire project"""
-
-        # 1. Role & Identity Definition
-        role = "You are a Technical Project Communicator who creates factual, direct internal team messaging."
-
-        # 2. Context & Background
-        context_section = f"""
-Project information:
-{context}
-
-Create internal messaging for team members and stakeholders about this project.
-"""
-
-        # 3. Task Definition & Objectives
-        task = """
-Generate internal messaging with:
-1. A clear subject line
-2. A direct explanation of what the project is
-3. A precise statement of the customer problem
-4. A factual description of the solution approach
-5. Specific business impact with metrics when possible
-
-Focus on operational clarity and factual information teams need.
-"""
-
-        # 4. Format & Structure Guidelines
-        format_guidelines = """
-Format as JSON with:
-{
-    "subject": "Internal: [Project Name] - [Primary Focus]",
-    "what_it_is": "Description of what the project is (1-2 sentences)",
-    "customer_pain": "Description of the customer problem (1-2 sentences)",
-    "our_solution": "Description of our solution approach (1-2 sentences)",
-    "business_impact": "Specific business impact with metrics (1-2 sentences)",
-    "timeline": "Key dates and milestones (1-2 sentences)",
-    "team_needs": "Required resources and dependencies (1-2 sentences)"
-}
-"""
-
-        # 5. Process Instructions
-        process = """
-1. Extract the core project purpose
-2. Identify specific customer problems
-3. Determine key solution elements
-4. Calculate business impact and metrics
-5. Identify key timeline milestones
-6. Determine resource requirements
-7. Draft direct, factual statements for each section
-8. Focus on information teams need to act
-"""
-
-        # 6. Content Requirements
-        content_req = """
-Content must be:
-- Factual with specific details
-- Quantifiable where possible (numbers, percentages)
-- Direct and concise (under 20 words per sentence)
-- Free of subjective claims
-- Written in active voice
-- Clear about resource needs and dependencies
-- Specific about timeline and milestones
-- Practical about implementation requirements
-
-The subject must clearly identify the project and focus.
-The project description must state what teams will build.
-Customer pain must specify actual problems, ideally with metrics.
-Solution approach must outline how teams will solve the problem.
-Business impact must include specific metrics when possible.
-Timeline must include concrete dates or timeframes.
-Team needs must specify required resources.
-"""
-
-        # 7. Constraints & Limitations
-        constraints = """
-Do not:
-- Use marketing language or hype
-- Make subjective claims without evidence
-- Use unnecessary adjectives or adverbs
-- Include vague statements
-- Use passive voice
-- Exceed 20 words per sentence
-- Omit resource requirements or dependencies
-- Hide implementation challenges
-"""
-
-        # 8. Examples & References
-        examples = """
-Example of effective, factual internal messaging:
-
-{
-    "subject": "Internal: Document Sync Tool - Engineering Kickoff",
-    "what_it_is": "A system that monitors document changes across PRDs, tickets, and strategy docs. It automatically identifies inconsistencies and suggests updates.",
-    "customer_pain": "Teams waste 4.2 hours weekly reconciling inconsistent documentation. This causes a 28% increase in implementation errors and delays project completion by 2-3 weeks.",
-    "our_solution": "We'll build connectors for Jira, Confluence, and Google Docs using their APIs. Our ML-based inconsistency detection will flag issues and suggest specific updates.",
-    "business_impact": "Will reduce documentation work by 62%, decrease implementation errors by 45%, and shorten project timelines by 2 weeks on average. Expected to increase team capacity by 8%.",
-    "timeline": "Design complete by June 5. Alpha by July 20. Beta by August 15. GA release by September 30.",
-    "team_needs": "Requires 2 backend engineers, 1 ML specialist, and 1 frontend developer for 12 weeks. Dependencies on Jira API upgrade scheduled for June 10."
-}
-"""
-
-        # 9. Interaction Guidelines
-        interaction = """
-This messaging will be shared with internal teams who need specific, actionable information about the project. Focus on what they need to know to contribute effectively.
-"""
-
-        # 10. Quality Assurance
-        quality = """
-Verify the output:
-- Contains specific details, not generalities
-- Includes quantifiable elements where possible
-- Uses direct, concise language
-- Includes concrete timeline milestones
-- Specifies actual resource requirements
-- Presents business impact with metrics
-- Uses active voice exclusively
-"""
-
-        return self.format_prompt(
-            role=role,
-            context=context_section,
-            task=task,
-            format_guidelines=format_guidelines,
-            process=process,
-            content_req=content_req,
-            constraints=constraints,
-            examples=examples,
-            interaction=interaction,
-            quality=quality
-        )
-
-    def _create_changes_prompt(self, context, changes):
-        """Create prompt for generating messaging about project changes"""
-
-        # 1. Role & Identity Definition
-        role = "You are a Technical Project Update Communicator who creates factual, direct internal team messaging about project changes."
-
-        # 2. Context & Background
-        context_section = f"""
-Project changes:
-{context}
-
-Create internal messaging about these project changes for team members and stakeholders.
-"""
-
-        # 3. Task Definition & Objectives
-        task = """
-Generate internal update messaging with:
-1. A clear subject line about the changes
-2. A direct explanation of what changed
-3. How these changes impact customers
-4. How these changes affect the business
-5. Timeline impacts
-6. Resource requirement changes
-
-Focus on operational clarity about what teams need to do differently.
-"""
-
-        # 4. Format & Structure Guidelines
-        format_guidelines = """
-Format as JSON with:
-{
-    "subject": "Update: [Project Name] - [Change Type]",
-    "what_changed": "Specific description of what changed (2-3 sentences)",
-    "customer_impact": "How changes affect the customer problem/solution (1-2 sentences)",
-    "business_impact": "How changes affect metrics and goals (1-2 sentences)",
-    "timeline_impact": "Changes to schedule and milestones (1-2 sentences)",
-    "team_needs": "Changes to required resources (1-2 sentences)"
-}
-"""
-
-        # 5. Process Instructions
-        process = """
-1. Identify exactly what changed in the project
-2. Determine how these changes affect customers
-3. Calculate impact on business metrics
-4. Assess timeline implications
-5. Determine resource requirement changes
-6. Draft direct, factual statements about each impact
-7. Focus on what teams need to know to adapt
-"""
-
-        # 6. Content Requirements
-        content_req = """
-Content must be:
-- Factual with specific details about what changed
-- Quantifiable where possible (numbers, percentages)
-- Direct and concise (under 20 words per sentence)
-- Free of subjective claims
-- Written in active voice
-- Clear about implementation implications
-- Specific about timeline impacts
-- Practical about resource requirement changes
-
-The subject must clearly identify the nature of changes.
-What changed must specify actual modifications to scope or approach.
-Customer impact must explain how changes affect the problem/solution.
-Business impact must include specific metric changes.
-Timeline impact must state actual schedule changes.
-Team needs must specify resource requirement changes.
-"""
-
-        # 7. Constraints & Limitations
-        constraints = """
-Do not:
-- Use marketing language or hype
-- Make subjective claims without evidence
-- Use unnecessary adjectives or adverbs
-- Include vague statements about "improvements"
-- Use passive voice
-- Exceed 20 words per sentence
-- Omit negative impacts of changes
-- Hide implementation challenges
-"""
-
-        # 8. Examples & References
-        examples = """
-Example of effective, factual update messaging:
-
-{
-    "subject": "Update: Document Sync Tool - Scope Change",
-    "what_changed": "Added support for Linear tickets and Notion docs based on customer feedback. Removed planned SharePoint integration due to API limitations. Changed inconsistency detection to use rule-based approach instead of ML to reduce complexity.",
-    "customer_impact": "Changes will support 35% more customers who use Linear/Notion. Will improve initial accuracy from 75% to 82% by using proven rule-based approach instead of ML.",
-    "business_impact": "Expected to increase addressable market by $2.4M. Will reduce development cost by $120K by avoiding ML complexity. May slightly decrease long-term accuracy improvement rate.",
-    "timeline_impact": "GA release delayed by 3 weeks to October 21. Alpha timeline unchanged. Beta expanded by 2 weeks.",
-    "team_needs": "No longer need ML specialist. Need additional QA time for new integrations. Backend team needs 2 additional weeks."
-}
-"""
-
-        # 9. Interaction Guidelines
-        interaction = """
-This messaging will be shared with teams who are already working on or familiar with the project. Focus on what has changed and how it affects their work.
-"""
-
-        # 10. Quality Assurance
-        quality = """
-Verify the output:
-- Clearly explains what actually changed
-- Quantifies impacts where possible
-- Uses direct, concise language
-- Includes specific timeline impacts
-- Specifies resource requirement changes
-- Presents both positive and negative impacts
-- Uses active voice exclusively
-"""
-
-        return self.format_prompt(
-            role=role,
-            context=context_section,
-            task=task,
-            format_guidelines=format_guidelines,
-            process=process,
-            content_req=content_req,
-            constraints=constraints,
-            examples=examples,
-            interaction=interaction,
-            quality=quality
-        )
 
     def _format_context(self, content, changes=None):
         """Format content as context for Claude"""
@@ -406,12 +153,19 @@ Verify the output:
         # Format the messaging
         messaging = {
             'subject': f"Internal: {project_name} - Engineering Kickoff",
-            'what_it_is': f"A system that monitors document changes across PRDs, tickets, and strategy docs. It automatically identifies inconsistencies and suggests updates.",
+            'what_it_is': f"A system that monitors document changes across PRDs, tickets, and strategy docs. It automatically identifies inconsistencies and suggests updates to maintain alignment.",
             'customer_pain': "Teams waste 4.2 hours weekly reconciling inconsistent documentation. This causes a 28% increase in implementation errors and delays project completion by 2-3 weeks.",
             'our_solution': "We'll build connectors for Jira, Confluence, and Google Docs using their APIs. Our inconsistency detection will flag issues and suggest specific updates.",
             'business_impact': "Will reduce documentation work by 62%, decrease implementation errors by 45%, and shorten project timelines by 2 weeks on average. Expected to increase team capacity by 8%.",
             'timeline': "Design complete by June 5. Alpha by July 20. Beta by August 15. GA release by September 30.",
-            'team_needs': "Requires 2 backend engineers, 1 ML specialist, and 1 frontend developer for 12 weeks. Dependencies on Jira API upgrade scheduled for June 10."
+            'team_needs': "Requires 2 backend engineers, 1 ML specialist, and 1 frontend developer for 12 weeks. Dependencies on Jira API upgrade scheduled for June 10.",
+            'sync_requirements': [
+                {
+                    'document_type': 'PRD',
+                    'update_needed': 'Add resource requirements section',
+                    'rationale': 'Resource requirements should be documented in PRD'
+                }
+            ]
         }
 
         return json.dumps(messaging)
@@ -437,7 +191,14 @@ Verify the output:
             'customer_impact': "Changes will support 35% more customers who use Linear/Notion. Will improve initial accuracy from 75% to 82% by using proven rule-based approach instead of ML.",
             'business_impact': "Expected to increase addressable market by $2.4M. Will reduce development cost by $120K by avoiding ML complexity. May slightly decrease long-term accuracy improvement rate.",
             'timeline_impact': "GA release delayed by 3 weeks to October 21. Alpha timeline unchanged. Beta expanded by 2 weeks.",
-            'team_needs': "No longer need ML specialist. Need additional QA time for new integrations. Backend team needs 2 additional weeks."
+            'team_needs': "No longer need ML specialist. Need additional QA time for new integrations. Backend team needs 2 additional weeks.",
+            'sync_requirements': [
+                {
+                    'document_type': 'PRD',
+                    'update_needed': 'Update integration list to reflect new scope',
+                    'rationale': 'PRD should match the current implementation plan'
+                }
+            ]
         }
 
         return json.dumps(messaging)
