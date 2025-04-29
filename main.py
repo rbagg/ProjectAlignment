@@ -1,7 +1,10 @@
+# main.py
+# This is the main application file with updated document extraction capabilities
+
 import os
 import json
 import logging
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, current_app, session, url_for
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -18,6 +21,9 @@ from integrations.linear import LinearIntegration
 from services.sync_service import SyncService
 from services.alignment_service import AlignmentService
 from services.change_impact_analyzer import ChangeImpactAnalyzer
+from services.document_manager import DocumentManager  # Import the new document manager
+from integrations.content_extractor import ContentExtractor
+from services.document_validator import DocumentValidator  # Import the new document validator
 
 # Import artifact generators
 from services.artifacts.project_description import ProjectDescriptionGenerator
@@ -52,6 +58,7 @@ confluence = ConfluenceIntegration()
 sync_service = SyncService()
 alignment_service = AlignmentService()
 impact_analyzer = ChangeImpactAnalyzer()
+document_manager = DocumentManager()  # Create document manager instance
 
 # Connect integrations to sync service
 sync_service.set_integrations(google_docs, jira, linear, confluence)
@@ -62,6 +69,12 @@ internal_messaging_generator = InternalMessagingGenerator()
 external_messaging_generator = ExternalMessagingGenerator()
 objection_generator = ObjectionGenerator()
 improvement_generator = ImprovementGenerator()
+
+# Register integrations with document manager
+document_manager.register_integration('google_docs', google_docs)
+document_manager.register_integration('jira', jira)
+document_manager.register_integration('linear', linear)
+document_manager.register_integration('confluence', confluence)
 
 @app.before_first_request
 def create_tables():
@@ -123,6 +136,33 @@ def connect_document():
         elif doc_type == 'confluence':
             confluence.connect_page(doc_id)
 
+        # Process document using the document manager for better extraction
+        processed_doc = None
+        if doc_type == 'google_docs':
+            # Determine document type based on naming convention or user selection
+            doc_subtype = 'prd'  # Default
+            if 'prfaq' in doc_id.lower():
+                doc_subtype = 'prfaq'
+            elif 'strategy' in doc_id.lower():
+                doc_subtype = 'strategy'
+
+            # Process the document
+            processed_doc = document_manager.process_document(
+                doc_id=doc_id,
+                doc_type=doc_subtype,
+                integration_type=doc_type
+            )
+
+            # Log validation results
+            if processed_doc and 'validation' in processed_doc:
+                validation = processed_doc['validation']
+                if not validation['valid']:
+                    logger.info(f"Document validation issues: {validation}")
+                    flash_msg = "Document connected, but has some issues: "
+                    if validation.get('missing_sections'):
+                        flash_msg += f"Missing sections: {', '.join(validation['missing_sections'])}. "
+                    flash(flash_msg, 'warning')
+
         # Analyze the connected document and generate initial artifacts
         project_content = sync_service.collect_all_content()
 
@@ -176,7 +216,7 @@ def connect_document():
 def manual_update():
     """Manually trigger an update and alignment check"""
     try:
-        # Collect all content
+        # Collect all content with improved document extraction
         project_content = sync_service.collect_all_content()
 
         # Analyze changes
@@ -235,6 +275,70 @@ def manual_update():
         logger.error(f"Error updating project: {str(e)}")
         flash(f'Error updating project: {str(e)}', 'error')
         return redirect(url_for('index'))
+
+# New route to inspect document structure
+@app.route('/document/inspect', methods=['GET', 'POST'])
+def inspect_document():
+    """
+    Inspect document structure using the improved extraction capabilities.
+    This allows users to see how the system extracts structured content from documents.
+    """
+    if request.method == 'POST':
+        # Process file upload or text input
+        content = ""
+        doc_type = request.form.get('doc_type', 'prd')
+
+        if 'file' in request.files and request.files['file'].filename:
+            file = request.files['file']
+            content = file.read().decode('utf-8')
+        elif request.form.get('content'):
+            content = request.form.get('content')
+        else:
+            flash('Please provide either a file or text content', 'error')
+            return redirect(url_for('inspect_document'))
+
+        try:
+            # Extract structured content with improved generic extractor
+            content_extractor = ContentExtractor()
+
+            # First try a generic extraction
+            structured_content = content_extractor.extract_structure(content)
+
+            # Then use the document type hint for enhanced extraction
+            structured_content = content_extractor.extract_structure(content, doc_type)
+
+            # Validate structure with improved flexible validator
+            document_validator = DocumentValidator()
+            validation = document_validator.validate_document(structured_content, doc_type)
+
+            # Generate improvement suggestions if needed
+            suggestions = document_validator.suggest_improvements(validation, structured_content, doc_type)
+
+            # Calculate metadata
+            metadata = {
+                'title': structured_content.get('name', doc_type.upper()),
+                'length': document_manager._calculate_document_length(structured_content),
+                'detected_type': validation.get('identified_type', doc_type)
+            }
+
+            # Render the results
+            return render_template(
+                'document_inspector_results.html',
+                raw_content=content,
+                structured_content=structured_content,
+                validation=validation,
+                suggestions=suggestions,
+                metadata=metadata,
+                doc_type=doc_type
+            )
+
+        except Exception as e:
+            logger.error(f"Error inspecting document: {str(e)}")
+            flash(f'Error inspecting document: {str(e)}', 'error')
+            return redirect(url_for('inspect_document'))
+
+    # Show the upload form
+    return render_template('document_inspector.html')
 
 @app.route('/webhook', methods=['POST'])
 @limiter.limit("100 per hour")
@@ -338,6 +442,12 @@ def test_generation():
 
         # Create a mock project structure
         mock_type = request.form.get('mock_type', 'prd')
+
+        # Use the content extractor for better structure extraction
+        content_extractor = ContentExtractor()
+        structured_content = content_extractor.extract_structure(content, mock_type)
+
+        # Create the project content structure
         project_content = {
             'prd': {},
             'prfaq': {},
@@ -347,25 +457,11 @@ def test_generation():
 
         # Add content to the appropriate section
         if mock_type == 'prd':
-            project_content['prd'] = {
-                'name': 'Test Project',
-                'overview': content,
-                'problem_statement': 'Extracted problem statement',
-                'solution': 'Extracted solution approach'
-            }
+            project_content['prd'] = structured_content
         elif mock_type == 'prfaq':
-            project_content['prfaq'] = {
-                'press_release': content,
-                'frequently_asked_questions': [
-                    {'question': 'What problem does this solve?', 'answer': 'Extracted problem statement'}
-                ]
-            }
+            project_content['prfaq'] = structured_content
         elif mock_type == 'strategy':
-            project_content['strategy'] = {
-                'vision': content,
-                'approach': 'Extracted strategic approach',
-                'business_value': 'Extracted business value'
-            }
+            project_content['strategy'] = structured_content
 
         # Generate artifacts
         project_content_json = json.dumps(project_content)
@@ -550,99 +646,143 @@ def generate_examples():
         ]
     }
 
-    # Convert to JSON
-    project_content = json.dumps(test_project)
-
-    try:
-        # Initialize generators
-        desc_generator = ProjectDescriptionGenerator()
-        internal_generator = InternalMessagingGenerator()
-        external_generator = ExternalMessagingGenerator()
-        objection_generator = ObjectionGenerator()
-        improvement_generator = ImprovementGenerator()
-
-        # Generate artifacts
-        description_json = desc_generator.generate(project_content)
-        internal_json = internal_generator.generate(project_content)
-        external_json = external_generator.generate(project_content)
-
-        # Mock artifact for direct generators
-        mock_artifact = {
-            "headline": "Save hours per week on documentation",
-            "description": "Our tool automatically syncs your documents and keeps everything aligned."
-        }
-
-        # Generate direct objections and improvements
-        direct_objections_json = objection_generator.generate_for_artifact(
-            json.loads(project_content), 
-            mock_artifact, 
-            'external'
-        )
-
-        direct_improvements_json = improvement_generator.generate_for_artifact(
-            json.loads(project_content), 
-            mock_artifact, 
-            'external'
-        )
-
-        # Parse results
-        description = json.loads(description_json)
-        internal = json.loads(internal_json)
-        external = json.loads(external_json)
-        direct_objections = json.loads(direct_objections_json)
-        direct_improvements = json.loads(direct_improvements_json)
-
-        # Compile all example data
-        example_data = {
-            'description': description,
-            'internal': internal,
-            'external': external,
-            'direct_objections': direct_objections,
-            'direct_improvements': direct_improvements,
-            'objection_input': mock_artifact,
-            'improvement_input': mock_artifact
-        }
-
-        return example_data
-
-    except Exception as e:
-        logger.error(f"Error generating examples: {str(e)}")
-        # Return minimal example data in case of error
-        return {
-            'description': {
-                'three_sentences': ['Example sentence 1', 'Example sentence 2', 'Example sentence 3'],
-                'three_paragraphs': ['Example paragraph 1', 'Example paragraph 2', 'Example paragraph 3'],
-                'objections': [],
-                'improvements': []
+    # Mock example data
+    example_data = {
+        'description': {
+            'three_sentences': [
+                'The Document Sync Tool automatically synchronizes documentation across systems like PRDs, tickets, and strategy documents to eliminate inconsistencies.',
+                'Teams waste hours every week manually reconciling documentation, leading to costly errors, project delays, and implementation mistakes.',
+                'Our solution uses connectors and NLP to identify inconsistencies between documents and suggest updates to keep everything perfectly aligned.'
+            ],
+            'three_paragraphs': [
+                'The Document Sync Tool solves the pervasive problem of inconsistent documentation across disconnected systems. It integrates with tools teams already use, like Jira, Confluence, and Google Docs, and automatically monitors all documents for changes. When one document is updated, the system intelligently identifies the corresponding changes needed in other documents and suggests specific updates to keep everything aligned. This eliminates the need for error-prone manual reconciliation and ensures all documents stay in sync.',
+                'Inconsistent documentation is a huge drain on development teams. On average, teams waste over 4 hours per week reconciling documents manually. Even then, inconsistencies still slip through, causing implementation errors that delay projects by weeks. The Document Sync Tool eliminates this wasted time and effort. Its intelligent monitoring and suggestion system keeps documentation aligned automatically, letting teams focus on writing great code instead of chasing down inconsistencies.',
+                'Under the hood, the Document Sync Tool uses a sophisticated system of connectors and natural language processing. It connects to the most popular documentation tools using their APIs and monitors documents for any changes. The NLP-powered inconsistency detection engine understands the meaning and intent behind each document, allowing it to identify conflicts and suggest specific changes. The system maintains a web of bidirectional links between related documents, so everything stays in sync no matter where a change originates.'
+            ],
+            'objections': [
+                {
+                    'title': 'Missing Success Metrics',
+                    'explanation': 'The artifact does not define any measurable KPIs or success criteria to evaluate the effectiveness of the Document Sync Tool.',
+                    'impact': 'Without clear success metrics, it will be difficult to determine if the tool is delivering the intended business value and ROI.'
+                },
+                {
+                    'title': 'No Plan for Edge Cases',
+                    'explanation': 'The artifact assumes the NLP inconsistency detection will work perfectly but doesn\'t address how the system will handle ambiguity or conflicting changes.',
+                    'impact': 'Unhandled edge cases will likely result in the system making incorrect suggestions or failing to keep documents fully in sync, reducing trust in the tool.'
+                }
+            ],
+            'improvements': [
+                {
+                    'title': 'Quantify Time Savings',
+                    'suggestion': 'In the three sentences and paragraphs, provide specific metrics on the hours saved per week using the Document Sync Tool.',
+                    'benefit': 'Specific time savings metrics make the value proposition more tangible and compelling to potential customers.'
+                },
+                {
+                    'title': 'Add Vision Alignment',
+                    'suggestion': 'Incorporate the vision statement from the strategy document into the opening sentences and paragraphs to create stronger alignment between artifacts.',
+                    'benefit': 'Consistent messaging across artifacts reinforces the core value proposition and keeps the team aligned on the north star vision.'
+                }
+            ]
+        },
+        'internal': {
+            'subject': 'Internal Brief: Document Sync Tool',
+            'what_it_is': 'A tool that synchronizes documentation across PRDs, tickets, and strategy docs. It detects inconsistencies and suggests updates to keep everything aligned.',
+            'customer_pain': 'Teams waste hours each week reconciling inconsistencies between documentation in different systems. This leads to errors, delays, and frustration.',
+            'our_solution': 'We will build connectors to Jira, Confluence, and Google Docs. Our inconsistency detection engine will flag misalignments and suggest updates to synchronize documentation.',
+            'business_impact': 'Will significantly reduce time wasted on manual documentation reconciliation. Expected to reduce implementation errors and accelerate project delivery timelines.',
+            'timeline': 'Design phase to be completed by early June. Alpha release targeted for mid-July, followed by beta in August. GA release goal is end of September.',
+            'team_needs': 'Requires dedicated backend and frontend engineering resources, as well as ML expertise. Has dependencies on planned upgrades to Jira and Confluence APIs.',
+            'objections': [
+                {
+                    'title': 'Missing Resource Details',
+                    'explanation': 'The artifact lists backend, frontend, and ML needs but does not specify the number of resources required for each area.',
+                    'impact': 'Lack of detailed resource requirements can lead to inadequate staffing, causing missed deadlines and reduced scope.'
+                },
+                {
+                    'title': 'Unclear Beta Criteria',
+                    'explanation': 'The timeline includes an August beta release but does not define the criteria that must be met to graduate from alpha to beta.',
+                    'impact': 'Without clear beta entrance criteria, the team may prematurely release an unstable product, frustrating early adopters and damaging reputation.'
+                }
+            ],
+            'improvements': [
+                {
+                    'title': 'Quantify Business Impact',
+                    'suggestion': 'Specify the expected hours saved per week and percentage reduction in errors.',
+                    'benefit': 'Quantified benefits make the business case more compelling and enable clear success measurement.'
+                },
+                {
+                    'title': 'Add Resource Requirements',
+                    'suggestion': 'Include the number of backend, frontend and ML resources needed, as specified in the tickets.',
+                    'benefit': 'Specifying resource needs helps with planning and ensures the PRD is consistent with the more detailed tickets.'
+                }
+            ]
+        },
+        'external': {
+            'headline': 'Automate document alignment across systems',
+            'pain_point': 'Your team wastes hours every week manually reconciling inconsistent documentation across different systems. This leads to errors, delays, and frustration for everyone involved.',
+            'solution': 'Our Document Sync Tool automatically monitors your connected documents for changes and intelligently suggests updates to keep everything in sync. Integration with your existing systems takes less than 30 minutes with no workflow disruption.',
+            'benefits': 'Eliminate hours spent every week on manual document alignment. Reduce costly errors caused by inconsistencies. Improve cross-functional collaboration with confidence that documentation is always up to date.',
+            'call_to_action': 'See how much time you can save with a free 14-day trial.',
+            'objections': [
+                {
+                    'title': 'Unsupported Systems',
+                    'explanation': 'The artifact claims "integration with your existing systems" but does not specify which systems are actually supported. This vagueness creates confusion and limits the audience.',
+                    'impact': 'Prospects using unsupported systems will be less likely to engage, reducing the pool of potential customers by up to 50%.'
+                },
+                {
+                    'title': 'Unrealistic Setup Time',
+                    'explanation': 'The "30-minute setup" claim seems unrealistic given the complexity of connecting to and syncing multiple documentation systems. This sets the wrong expectation.',
+                    'impact': 'When actual setup takes longer than promised, customer satisfaction drops and negative word-of-mouth increases, damaging brand trust.'
+                }
+            ],
+            'improvements': [
+                {
+                    'title': 'Clarify System Integrations',
+                    'suggestion': 'Explicitly list the documentation systems the tool integrates with (e.g., Jira, Confluence, Google Docs) and ensure this list is consistent across all project documents.',
+                    'benefit': 'Clarity on supported integrations prevents customer confusion and ensures consistent expectations.'
+                },
+                {
+                    'title': 'Strengthen Error Reduction Benefit',
+                    'suggestion': 'Provide a tangible example of a costly error that can be prevented by eliminating documentation inconsistencies.',
+                    'benefit': 'Specific examples of prevented errors make the benefit more relatable and impactful for potential customers.'
+                }
+            ]
+        },
+        'direct_objections': [
+            {
+                'title': 'Missing Specifics on Time Savings',
+                'explanation': 'The artifact claims to "save hours per week" but doesn\'t quantify the actual time savings users can expect.',
+                'impact': 'Without specific, measurable benefits, it will be harder to convince users to adopt the tool and realize the full value.'
             },
-            'internal': {
-                'subject': 'Example subject',
-                'what_it_is': 'Example description',
-                'customer_pain': 'Example pain point',
-                'our_solution': 'Example solution',
-                'business_impact': 'Example impact',
-                'objections': [],
-                'improvements': []
-            },
-            'external': {
-                'headline': 'Example headline',
-                'pain_point': 'Example pain point',
-                'solution': 'Example solution',
-                'call_to_action': 'Example CTA',
-                'objections': [],
-                'improvements': []
-            },
-            'direct_objections': [],
-            'direct_improvements': [],
-            'objection_input': {
-                'headline': 'Example headline',
-                'description': 'Example description'
-            },
-            'improvement_input': {
-                'headline': 'Example headline',
-                'description': 'Example description'
+            {
+                'title': 'Lacks Differentiation',
+                'explanation': 'The description "syncs your documents and keeps everything aligned" doesn\'t clearly differentiate this tool from other document management solutions.',
+                'impact': 'In a crowded market of documentation tools, lack of differentiation makes it difficult to stand out and attract users from competitors.'
             }
+        ],
+        'direct_improvements': [
+            {
+                'title': 'Quantify Time Savings',
+                'suggestion': 'Specify the typical hours per week teams will save using the Document Sync Tool, based on user research or early testing.',
+                'benefit': 'Quantifying time savings helps prospects quickly grasp the concrete value and builds a stronger case for adoption.'
+            },
+            {
+                'title': 'Highlight Error Reduction',
+                'suggestion': 'Mention the reduction in errors and rework that comes from always having documents in sync.',
+                'benefit': 'Reduced errors means higher quality work with less wasted effort, which translates to more productive teams and faster time-to-market.'
+            }
+        ],
+        'objection_input': {
+            'headline': 'Save hours per week on documentation',
+            'description': 'Our tool automatically syncs your documents and keeps everything aligned.'
+        },
+        'improvement_input': {
+            'headline': 'Save hours per week on documentation',
+            'description': 'Our tool automatically syncs your documents and keeps everything aligned.'
         }
+    }
+
+    return example_data
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

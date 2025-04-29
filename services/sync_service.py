@@ -1,14 +1,18 @@
 # services/sync_service.py
+# This file contains the SyncService for synchronizing document changes
+
 import json
 import logging
 from datetime import datetime
 
 from models import db, Project
+from services.document_manager import DocumentManager
 
 logger = logging.getLogger(__name__)
 
 class SyncService:
     def __init__(self):
+        """Initialize the sync service"""
         self.logger = logging.getLogger(__name__)
         # Store references to integration instances (will be set by main.py)
         self.google_docs = None
@@ -16,12 +20,29 @@ class SyncService:
         self.linear = None
         self.confluence = None
 
+        # Create document manager
+        self.document_manager = DocumentManager()
+
     def set_integrations(self, google_docs, jira, linear, confluence):
-        """Set integration instances"""
+        """
+        Set integration instances
+
+        Args:
+            google_docs: Google Docs integration
+            jira: Jira integration
+            linear: Linear integration
+            confluence: Confluence integration
+        """
         self.google_docs = google_docs
         self.jira = jira
         self.linear = linear
         self.confluence = confluence
+
+        # Register integrations with document manager
+        self.document_manager.register_integration('google_docs', google_docs)
+        self.document_manager.register_integration('jira', jira)
+        self.document_manager.register_integration('linear', linear)
+        self.document_manager.register_integration('confluence', confluence)
 
     def collect_all_content(self):
         """
@@ -37,16 +58,27 @@ class SyncService:
             'tickets': []
         }
 
-        # Collect Google Docs content
+        # Collect Google Docs content with improved extraction
         if self.google_docs:
             docs = self.google_docs.get_connected_docs()
             for doc in docs:
-                if doc['type'] == 'prd':
-                    content['prd'] = self.google_docs.get_document_content(doc['id'])
-                elif doc['type'] == 'prfaq':
-                    content['prfaq'] = self.google_docs.get_document_content(doc['id'])
-                elif doc['type'] == 'strategy':
-                    content['strategy'] = self.google_docs.get_document_content(doc['id'])
+                doc_id = doc['id']
+                doc_type = doc['type']
+
+                # Process the document using document manager
+                processed_doc = self.document_manager.process_document(
+                    doc_id=doc_id,
+                    doc_type=doc_type,
+                    integration_type='google_docs'
+                )
+
+                if processed_doc and 'content' in processed_doc:
+                    if doc_type == 'prd':
+                        content['prd'] = processed_doc['content']
+                    elif doc_type == 'prfaq':
+                        content['prfaq'] = processed_doc['content']
+                    elif doc_type == 'strategy':
+                        content['strategy'] = processed_doc['content']
 
         # Collect Jira tickets
         if self.jira:
@@ -56,20 +88,42 @@ class SyncService:
         if self.linear:
             content['tickets'].extend(self.linear.get_tickets())
 
-        # Additional content from Confluence
+        # Additional content from Confluence with improved extraction
         if self.confluence:
-            confluence_content = self.confluence.get_pages()
-            # Merge with appropriate sections based on page labels or metadata
-            for page in confluence_content:
+            confluence_pages = self.confluence.get_pages()
+            for page in confluence_pages:
+                page_id = page['id']
+
+                # Determine document type based on labels
+                doc_type = 'other'
                 if 'prd' in page.get('labels', []):
-                    self._merge_content(content['prd'], page['content'])
+                    doc_type = 'prd'
                 elif 'strategy' in page.get('labels', []):
-                    self._merge_content(content['strategy'], page['content'])
+                    doc_type = 'strategy'
+
+                # Process the document using document manager
+                processed_doc = self.document_manager.process_document(
+                    doc_id=page_id,
+                    doc_type=doc_type,
+                    integration_type='confluence'
+                )
+
+                if processed_doc and 'content' in processed_doc:
+                    if doc_type == 'prd':
+                        self._merge_content(content['prd'], processed_doc['content'])
+                    elif doc_type == 'strategy':
+                        self._merge_content(content['strategy'], processed_doc['content'])
 
         return json.dumps(content)
 
     def _merge_content(self, target, source):
-        """Merge source content into target"""
+        """
+        Merge source content into target
+
+        Args:
+            target (dict): Target dictionary
+            source (dict): Source dictionary
+        """
         if isinstance(source, dict) and isinstance(target, dict):
             for key, value in source.items():
                 if key in target and isinstance(target[key], dict) and isinstance(value, dict):
@@ -167,8 +221,18 @@ class SyncService:
         if not doc_type:
             return None
 
-        # Get updated document content
-        updated_content = self.google_docs.get_document_content(doc_id)
+        # Process the document using document manager for better extraction
+        processed_doc = self.document_manager.process_document(
+            doc_id=doc_id,
+            doc_type=doc_type,
+            integration_type='google_docs'
+        )
+
+        if not processed_doc or 'content' not in processed_doc:
+            return None
+
+        # Get the structured content
+        updated_content = processed_doc['content']
 
         # Initialize changes
         changes = {
@@ -235,6 +299,19 @@ class SyncService:
         else:
             return None
 
+        # Process the document using document manager for better extraction
+        processed_doc = self.document_manager.process_document(
+            doc_id=page_id,
+            doc_type=doc_type,
+            integration_type='confluence'
+        )
+
+        if not processed_doc or 'content' not in processed_doc:
+            return None
+
+        # Get the structured content
+        page_content = processed_doc['content']
+
         # Initialize changes
         changes = {
             doc_type: {
@@ -243,9 +320,6 @@ class SyncService:
                 'removed': []
             }
         }
-
-        # Extract structured content sections
-        page_content = self.confluence.extract_structured_content(page)
 
         # Compare with current content
         current_content = content.get(doc_type, {})

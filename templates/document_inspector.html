@@ -1,0 +1,173 @@
+<!-- templates/document_inspector.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Document Structure Inspector</h2>
+        <div>
+            <a href="{{ url_for('index') }}" class="button secondary">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+    <div class="card-content">
+        <p>Upload a document or paste content to inspect how the system extracts structured content.</p>
+        <p>This tool helps you understand how the document extraction system works and can help debug issues with document connections.</p>
+
+        <form action="{{ url_for('inspect_document') }}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="doc_type">Document Type:</label>
+                <select name="doc_type" id="doc_type" required>
+                    <option value="prd">Product Requirements Document (PRD)</option>
+                    <option value="prfaq">Press Release/FAQ (PRFAQ)</option>
+                    <option value="strategy">Strategy Document</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="file">Upload a file:</label>
+                <input type="file" name="file" id="file">
+            </div>
+
+            <div class="form-group">
+                <label for="content">Or paste content:</label>
+                <textarea name="content" id="content" rows="15" style="width: 100%;"></textarea>
+            </div>
+
+            <button type="submit" class="button">Inspect Document Structure</button>
+        </form>
+
+        <div class="example-section">
+            <h3>Example Document Format</h3>
+
+            <div class="example-tabs">
+                <button class="example-tab active" onclick="showExample('prd')">PRD Example</button>
+                <button class="example-tab" onclick="showExample('prfaq')">PRFAQ Example</button>
+                <button class="example-tab" onclick="showExample('strategy')">Strategy Example</button>
+            </div>
+
+            <div id="prd-example" class="example-content active">
+                <pre>
+# Project Alignment Tool
+
+## Overview
+The Project Alignment Tool is a comprehensive system that ensures all 
+project documentation remains synchronized across different platforms.
+
+## Problem Statement
+Teams waste 4+ hours weekly reconciling inconsistent documentation 
+across different systems.
+
+## Solution
+Our tool creates bidirectional connections between documents. When 
+changes occur in any document, the system flags needed updates.
+                </pre>
+            </div>
+
+            <div id="prfaq-example" class="example-content">
+                <pre>
+# Document Sync Tool - Press Release
+
+FOR IMMEDIATE RELEASE
+Introducing the Document Sync Tool - a new solution that keeps 
+your documentation in sync automatically.
+
+## Frequently Asked Questions
+
+Q: What problem does this solve?
+A: Teams often have multiple documents that get out of sync.
+
+Q: How does it work?
+A: The tool connects to all your project documents and detects changes.
+                </pre>
+            </div>
+
+            <div id="strategy-example" class="example-content">
+                <pre>
+# Project Alignment Strategy
+
+## Vision
+Create the best tool for maintaining project alignment through 
+synchronized documentation.
+
+## Approach
+Focus on simplicity and actionable suggestions, using AI and 
+bidirectional links.
+
+## Business Value
+Reduce errors due to misalignment by 40% and save team time 
+spent reconciling documents.
+                </pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showExample(type) {
+    // Hide all examples
+    const examples = document.querySelectorAll('.example-content');
+    examples.forEach(example => {
+        example.classList.remove('active');
+    });
+
+    // Show selected example
+    document.getElementById(type + '-example').classList.add('active');
+
+    // Update tabs
+    const tabs = document.querySelectorAll('.example-tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+</script>
+
+<style>
+.example-section {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.example-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.example-tab {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.example-tab.active {
+    color: #495057;
+    border-bottom-color: #f3c095;
+}
+
+.example-content {
+    display: none;
+}
+
+.example-content.active {
+    display: block;
+}
+
+.example-content pre {
+    padding: 1rem;
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    font-family: monospace;
+    color: #495057;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,397 @@
+<!-- Update to templates/document_inspector_results.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Document Structure Inspection Results</h2>
+        <div>
+            <a href="{{ url_for('inspect_document') }}" class="button secondary">&larr; Back to Inspector</a>
+        </div>
+    </div>
+    <div class="card-content">
+        <div class="inspection-summary">
+            <h3>Document Summary</h3>
+            <div class="summary-info">
+                <div class="summary-item">
+                    <span class="label">Document Type:</span>
+                    <span class="value">{{ metadata.detected_type|upper if metadata.detected_type else doc_type|upper }}</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="label">Title:</span>
+                    <span class="value">{{ metadata.title }}</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="label">Sections:</span>
+                    <span class="value">{{ metadata.length.sections }}</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="label">Words:</span>
+                    <span class="value">{{ metadata.length.words }}</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="label">Characters:</span>
+                    <span class="value">{{ metadata.length.characters }}</span>
+                </div>
+
+                <div class="summary-item">
+                    <span class="label">Document Analysis:</span>
+                    <span class="value">{{ validation.overall_suggestion }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="inspection-tabs">
+            <button class="inspection-tab active" onclick="showTab('structure')">Extracted Structure</button>
+            <button class="inspection-tab" onclick="showTab('suggestions')">Suggestions</button>
+            <button class="inspection-tab" onclick="showTab('raw')">Raw Input</button>
+        </div>
+
+        <div id="structure-tab" class="inspection-tab-content active">
+            <h3>Extracted Structure</h3>
+            <div class="structure-view">
+                {% for section_name, section_content in structured_content.items() %}
+                <div class="structure-section">
+                    <h4 class="section-name">{{ section_name|replace('_', ' ')|title }}</h4>
+                    {% if section_content is string %}
+                        <div class="section-content">{{ section_content }}</div>
+                    {% elif section_content is mapping %}
+                        <div class="section-content">
+                            <pre>{{ section_content|tojson(indent=2) }}</pre>
+                        </div>
+                    {% elif section_content is iterable %}
+                        <div class="section-content">
+                            {% if section_name == 'frequently_asked_questions' %}
+                                <div class="faq-list">
+                                {% for item in section_content %}
+                                    <div class="faq-item">
+                                        <div class="faq-question">{{ item.question }}</div>
+                                        <div class="faq-answer">{{ item.answer }}</div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                <pre>{{ section_content|tojson(indent=2) }}</pre>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="suggestions-tab" class="inspection-tab-content">
+            <h3>Document Analysis & Suggestions</h3>
+
+            <div class="document-assessment">
+                <h4>Document Assessment</h4>
+                <p>{{ validation.overall_suggestion }}</p>
+
+                {% if validation.present_sections %}
+                <div class="present-sections">
+                    <h5>Detected Sections</h5>
+                    <ul class="section-list">
+                        {% for section in validation.present_sections %}
+                            <li><span class="section-badge present">{{ section|replace('_', ' ')|title }}</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if validation.suggested_additions %}
+                <div class="missing-sections">
+                    <h5>Consider Adding</h5>
+                    <ul class="section-list">
+                        {% for section in validation.suggested_additions %}
+                            <li><span class="section-badge missing">{{ section|replace('_', ' ')|title }}</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if suggestions %}
+                <div class="improvement-suggestions">
+                    <h4>Document Improvement Suggestions</h4>
+                    <div class="suggestions-list">
+                        {% for suggestion in suggestions %}
+                            <div class="suggestion-item">
+                                <h5>{{ suggestion.suggestion }}</h5>
+
+                                {% if suggestion.examples %}
+                                    <div class="suggestion-example">
+                                        <h6>Example:</h6>
+                                        {% if suggestion.examples is string %}
+                                            <p>{{ suggestion.examples }}</p>
+                                        {% elif suggestion.examples is iterable %}
+                                            <ul>
+                                                {% for example in suggestion.examples %}
+                                                    <li>{{ example }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="no-suggestions">
+                    <p>No specific improvement suggestions.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div id="raw-tab" class="inspection-tab-content">
+            <h3>Raw Input</h3>
+            <pre class="raw-content">{{ raw_content }}</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+function showTab(tabName) {
+    // Hide all tabs
+    const tabContents = document.querySelectorAll('.inspection-tab-content');
+    tabContents.forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+
+    // Update tab buttons
+    const tabs = document.querySelectorAll('.inspection-tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+</script>
+
+<style>
+.inspection-summary {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+.summary-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-item .label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.summary-item .value {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.inspection-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    overflow-x: auto;
+}
+
+.inspection-tab {
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+.inspection-tab.active {
+    color: #495057;
+    border-bottom-color: #f3c095;
+}
+
+.inspection-tab-content {
+    display: none;
+    padding: 1rem 0;
+}
+
+.inspection-tab-content.active {
+    display: block;
+}
+
+.structure-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.structure-section {
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.section-name {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 1rem;
+}
+
+.section-content {
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+.section-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.document-assessment {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.document-assessment h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #495057;
+}
+
+.document-assessment p {
+    margin-bottom: 1rem;
+}
+
+.section-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.section-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.section-badge.present {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+}
+
+.section-badge.missing {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+.improvement-suggestions {
+    margin-top: 2rem;
+}
+
+.improvement-suggestions h4 {
+    margin-bottom: 1rem;
+    color: #495057;
+}
+
+.suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.suggestion-item {
+    padding: 1rem;
+    background-color: #e2f3fc;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    color: #0c5460;
+}
+
+.suggestion-item h5 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.suggestion-example {
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+}
+
+.suggestion-example h6 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.raw-content {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    font-family: monospace;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.faq-item {
+    border-left: 3px solid #0c5460;
+    padding-left: 1rem;
+}
+
+.faq-question {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.faq-answer {
+    color: #495057;
+}
+
+.no-suggestions {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

@@ -275,6 +275,7 @@
             <a href="{{ url_for('setup') }}" {% if request.path == url_for('setup') %}class="active"{% endif %}>Connect Documents</a>
             <a href="{{ url_for('test_form') }}" {% if request.path == url_for('test_form') %}class="active"{% endif %}>Test Generator</a>
             <a href="{{ url_for('test_examples') }}" {% if request.path == url_for('test_examples') %}class="active"{% endif %}>Generator Examples</a>
+            <a href="{{ url_for('inspect_document') }}" {% if request.path == url_for('inspect_document') %}class="active"{% endif %}>Document Inspector</a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
