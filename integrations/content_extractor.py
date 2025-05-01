@@ -1,12 +1,17 @@
 # integrations/content_extractor.py
-# This file contains a more generic ContentExtractor class
+# Enhanced ContentExtractor with LLM-based document structure validation
+# Using direct API calls and robust JSON handling
 
 import re
+import json
 import logging
+import requests  # For direct API calls
 from collections import defaultdict
+from flask import current_app
+from prompts import get_prompt
 
 class ContentExtractor:
-    """Extract structured content from different document types using a generic approach"""
+    """Extract structured content from different document types using a generic approach followed by LLM review"""
 
     def __init__(self):
         """Initialize the ContentExtractor with a logger"""
@@ -14,14 +19,14 @@ class ContentExtractor:
 
     def extract_structure(self, content, doc_type=None):
         """
-        Extract structured content with a generic heading-based parser
+        Extract structured content with a generic heading-based parser followed by LLM review
 
         Args:
             content (str): Raw document content
             doc_type (str, optional): Document type hint (not required for generic extraction)
 
         Returns:
-            dict: Structured content with sections
+            dict: Structured content with semantically organized sections
         """
         # First, try to identify the document title regardless of type
         title = self._extract_document_title(content)
@@ -35,6 +40,21 @@ class ContentExtractor:
         # If we have a document type hint, we can do some post-processing
         if doc_type:
             sections = self._enhance_extraction(sections, content, doc_type)
+
+        # Now, perform LLM-based review to improve the structure
+        if len(sections) > 2:  # Only if we have some sections to work with beyond just 'name'
+            try:
+                initial_section_count = len(sections)
+                self.logger.info(f"Starting LLM structure review with {initial_section_count} sections")
+
+                sections = self._llm_structure_review(sections, content, doc_type)
+
+                final_section_count = len(sections)
+                self.logger.info(f"Completed LLM structure review: {initial_section_count} → {final_section_count} sections")
+            except Exception as e:
+                self.logger.error(f"Error during LLM structure review: {str(e)}")
+                # Continue with the current sections if LLM review fails
+                pass
 
         return sections
 
@@ -225,6 +245,247 @@ class ContentExtractor:
                     sections['business_value'] = value_text
 
         return sections
+
+    def _llm_structure_review(self, sections, original_content, doc_type=None):
+        """
+        Use LLM to review and improve the document structure using direct API calls
+
+        Args:
+            sections (dict): Initially extracted sections
+            original_content (str): Raw document content
+            doc_type (str, optional): Document type hint
+
+        Returns:
+            dict: Improved sections with semantic organization
+        """
+        try:
+            # Get Claude API key from application config
+            api_key = current_app.config.get('CLAUDE_API_KEY')
+            model = current_app.config.get('CLAUDE_MODEL', 'claude-3-opus-20240229')
+
+            if not api_key:
+                self.logger.warning("No Claude API key available. Skipping LLM structure review.")
+                return sections
+
+            # Prepare the document structure for review
+            sections_str = json.dumps(sections, indent=2)
+
+            # Calculate content length for context
+            content_length = len(original_content)
+
+            # Get the document structure review prompt from centralized prompt system
+            prompt = get_prompt(
+                'document_structure',
+                None,  # No general context needed
+                sections=sections_str,
+                doc_type=doc_type if doc_type else "Unknown",
+                content_length=content_length
+            )
+
+            # Add special instructions for Claude to return ONLY valid JSON
+            prompt += "\n\nIMPORTANT: Your response must be ONLY a valid, parseable JSON object with no other text. No explanations, no other formatting, just the JSON structure."
+
+            # Log the action
+            self.logger.info(f"Making direct API call to Claude for document structure review")
+
+            # Use direct API call with known working approach
+            try:
+                response = requests.post(
+                    'https://api.anthropic.com/v1/messages',
+                    json={
+                        'model': model,
+                        'max_tokens': 1500,
+                        'messages': [{'role': 'user', 'content': prompt}]
+                    },
+                    headers={
+                        'x-api-key': api_key,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout=30  # 30 second timeout
+                )
+
+                # Check response status
+                if response.status_code != 200:
+                    self.logger.error(f"Claude API error: {response.status_code} - {response.text}")
+                    return sections
+
+                # Parse response
+                response_data = response.json()
+                console.log(response_data)
+                # Log the raw response content for debugging
+                self.logger.debug(f"Raw Claude response: {response_content[:200]}...")
+
+                # Clean up the JSON - ensure it's properly formatted
+                try:
+                    # First try: look for valid JSON in the response
+                    import re
+                    json_match = re.search(r'({[\s\S]*})', response_content)
+
+                    if json_match:
+                        json_text = json_match.group(1)
+                        # Preprocess the JSON text - fix common issues
+                        json_text = json_text.replace('\n', ' ')  # Replace newlines with spaces
+                        json_text = re.sub(r'\s+', ' ', json_text)  # Replace multiple spaces with single space
+
+                        # Special debugging for the specific error you're seeing
+                        self.logger.debug(f"JSON text starts with: {json_text[:20]}")
+                        if json_text.startswith('{\n  "name"') or json_text.startswith('{ "name"'):
+                            self.logger.debug("Found problematic JSON format, fixing...")
+                            # Make sure we have a clean JSON opening
+                            json_text = json_text.replace('{\n  "', '{"')
+                            json_text = json_text.replace('{ "', '{"')
+
+                        # Try to parse the JSON
+                        self.logger.debug(f"Attempting to parse cleaned JSON: {json_text[:50]}...")
+                        improved_sections = json.loads(json_text)
+
+                        # Log success and section counts
+                        self.logger.info(f"Successfully parsed JSON after cleaning!")
+                        initial_count = len(sections)
+                        improved_count = len(improved_sections)
+                        self.logger.info(f"Section count: {initial_count} → {improved_count}")
+
+                        return improved_sections
+                    else:
+                        self.logger.warning("Could not find valid JSON in Claude response")
+                        return sections
+
+                except Exception as e:
+                    self.logger.error(f"Error parsing JSON from Claude: {str(e)}")
+                    self.logger.error(f"First 20 chars of response: {response_content[:20]}")
+
+                    # Super fallback - try something really simple
+                    try:
+                        self.logger.debug("Attempting JSON parse with extreme cleaning...")
+                        # Just take everything that looks like JSON and force it
+                        simple_json = response_content.replace('\n', ' ').strip()
+                        if simple_json.startswith('```json'):
+                            simple_json = simple_json.replace('```json', '', 1)
+                        if simple_json.endswith('```'):
+                            simple_json = simple_json[:-3]
+
+                        # Force proper JSON start/end
+                        if not simple_json.startswith('{'):
+                            simple_json = '{' + simple_json
+                        if not simple_json.endswith('}'):
+                            simple_json = simple_json + '}'
+
+                        # Try to parse this extremely cleaned version
+                        improved_sections = json.loads(simple_json)
+                        self.logger.info("Successfully parsed JSON with extreme cleaning!")
+                        return improved_sections
+                    except:
+                        self.logger.error("All JSON parsing attempts failed")
+                        return sections
+
+                # Process the response with our enhanced robust JSON handling
+                return self._process_claude_json_response(response_content, sections)
+
+            except requests.exceptions.RequestException as req_error:
+                self.logger.error(f"Request error when calling Claude API: {str(req_error)}")
+                return sections
+
+        except Exception as e:
+            self.logger.error(f"Error in LLM structure review: {str(e)}")
+            return sections  # Return original sections if LLM review fails
+
+    def _process_claude_json_response(self, response_content, original_sections):
+        """
+        Process Claude's JSON response with robust error handling
+
+        Args:
+            response_content (str): The raw response text from Claude
+            original_sections (dict): The original sections to return if parsing fails
+
+        Returns:
+            dict: The parsed improved sections or the original sections if parsing fails
+        """
+        # Find JSON in the response
+        json_start = response_content.find('{')
+        json_end = response_content.rfind('}') + 1
+
+        if json_start == -1 or json_end == -1:
+            self.logger.warning("Could not find JSON in Claude response")
+            # Log a sample of the full response for debugging
+            self.logger.debug(f"Full response content: {response_content}")
+            return original_sections
+
+        # Extract the JSON substring
+        json_str = response_content[json_start:json_end]
+
+        # Log the raw JSON string
+        self.logger.debug(f"Raw JSON string: {json_str[:100]}...")  # First 100 chars
+
+        try:
+            # Clean the JSON string before parsing
+            # Remove any leading/trailing whitespace or newlines
+            cleaned_json = json_str.strip()
+
+            # Try to parse the cleaned JSON
+            improved_sections = json.loads(cleaned_json)
+            self.logger.info(f"Successfully improved document structure: detected type={improved_sections.get('structured_type', 'unknown')}")
+
+            # Log section counts for debugging
+            initial_count = len(original_sections)
+            improved_count = len(improved_sections)
+            self.logger.info(f"Section count: {initial_count} → {improved_count}")
+
+            return improved_sections
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error parsing JSON from Claude response: {str(e)}")
+
+            # More aggressive cleaning - try to fix common JSON problems
+            try:
+                # Try to clean the JSON string more aggressively
+                aggressive_clean = cleaned_json.replace('\n', '').replace('\r', '')
+                self.logger.debug(f"Attempting aggressive JSON cleaning")
+
+                # Try to parse again with aggressively cleaned JSON
+                improved_sections = json.loads(aggressive_clean)
+                self.logger.info(f"Successfully parsed JSON after aggressive cleaning")
+                return improved_sections
+            except json.JSONDecodeError:
+                self.logger.error(f"JSON parsing still failed after aggressive cleaning")
+
+            # If all parsing attempts fail, try to extract valid JSON using regex
+            try:
+                self.logger.debug(f"Attempting regex-based JSON extraction")
+                # Look for well-formed JSON objects
+                json_pattern = r'({[^{}]*(?:{[^{}]*}[^{}]*)*})'
+                match = re.search(json_pattern, response_content)
+                if match:
+                    extracted_json = match.group(1)
+                    improved_sections = json.loads(extracted_json)
+                    self.logger.info(f"Successfully extracted JSON using regex")
+                    return improved_sections
+            except (json.JSONDecodeError, Exception) as regex_error:
+                self.logger.error(f"Regex extraction failed: {str(regex_error)}")
+
+            # Log problematic JSON for debugging
+            self.logger.debug(f"Problematic JSON (first 500 chars): {json_str[:500]}...")
+
+            # Final fallback: try to manually fix the most common JSON errors
+            try:
+                self.logger.debug(f"Attempting manual JSON repair")
+                # Check if it's missing an opening or closing brace
+                if not cleaned_json.startswith('{'):
+                    cleaned_json = '{' + cleaned_json
+                if not cleaned_json.endswith('}'):
+                    cleaned_json = cleaned_json + '}'
+
+                # Fix common quoting errors
+                cleaned_json = re.sub(r'([{,]\s*)(\w+)(\s*:)', r'\1"\2"\3', cleaned_json)
+
+                # Try parsing one last time
+                improved_sections = json.loads(cleaned_json)
+                self.logger.info(f"Successfully parsed JSON after manual repair")
+                return improved_sections
+            except json.JSONDecodeError:
+                self.logger.error(f"All JSON parsing attempts failed")
+
+            # If all parsing attempts fail, return original sections
+            return original_sections
 
     def _find_problem_statement(self, content):
         """Find problem statement in content"""

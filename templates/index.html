@@ -156,157 +156,44 @@
                     </div>
                 </div>
 
-                <!-- Two column layout for objections and improvements -->
-                <div class="two-column" style="margin-top: 20px;">
-                    <!-- Critical Objections Section -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Critical Objections</h2>
-                        </div>
-                        <div class="card-content">
-                            {% if artifacts.description and artifacts.description.objections %}
-                                <h3>Project Description Objections</h3>
-                                <ul class="objections">
-                                    {% for objection in artifacts.description.objections %}
-                                        <li>
-                                            <strong>{{ objection.title }}</strong>
-                                            <p>{{ objection.explanation }}</p>
-                                            {% if objection.impact %}
-                                            <span class="impact">Impact: {{ objection.impact }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if artifacts.internal and artifacts.internal.objections %}
-                                <h3>Internal Messaging Objections</h3>
-                                <ul class="objections">
-                                    {% for objection in artifacts.internal.objections %}
-                                        <li>
-                                            <strong>{{ objection.title }}</strong>
-                                            <p>{{ objection.explanation }}</p>
-                                            {% if objection.impact %}
-                                            <span class="impact">Impact: {{ objection.impact }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if artifacts.external and artifacts.external.objections %}
-                                <h3>External Messaging Objections</h3>
-                                <ul class="objections">
-                                    {% for objection in artifacts.external.objections %}
-                                        <li>
-                                            <strong>{{ objection.title }}</strong>
-                                            <p>{{ objection.explanation }}</p>
-                                            {% if objection.impact %}
-                                            <span class="impact">Impact: {{ objection.impact }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if not (artifacts.description and artifacts.description.objections) and 
-                                not (artifacts.internal and artifacts.internal.objections) and 
-                                not (artifacts.external and artifacts.external.objections) %}
-                                <p>No objections generated yet.</p>
-                            {% endif %}
-                        </div>
+                <!-- Objections Section -->
+                <h3>Critical Objections</h3>
+                <ul class="objections">
+                  {% for objection in objections %}
+                  <li>
+                    <strong>{{ objection.title }}</strong>
+                    <p>{{ objection.explanation }}</p>
+                    {% if objection.impact %}
+                    <div class="impact">
+                      <strong>Impact:</strong> {{ objection.impact }}
                     </div>
-
-                    <!-- Improvement Suggestions Section -->
-                    <div class="card">
-                        <div class="card-header">
-                            <h2>Improvement Suggestions</h2>
-                        </div>
-                        <div class="card-content">
-                            {% if artifacts.description and artifacts.description.improvements %}
-                                <h3>Project Description Improvements</h3>
-                                <ul class="improvements">
-                                    {% for improvement in artifacts.description.improvements %}
-                                        <li>
-                                            <strong>{{ improvement.title }}</strong>
-                                            <p>{{ improvement.suggestion }}</p>
-                                            {% if improvement.benefit %}
-                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if artifacts.internal and artifacts.internal.improvements %}
-                                <h3>Internal Messaging Improvements</h3>
-                                <ul class="improvements">
-                                    {% for improvement in artifacts.internal.improvements %}
-                                        <li>
-                                            <strong>{{ improvement.title }}</strong>
-                                            <p>{{ improvement.suggestion }}</p>
-                                            {% if improvement.benefit %}
-                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if artifacts.external and artifacts.external.improvements %}
-                                <h3>External Messaging Improvements</h3>
-                                <ul class="improvements">
-                                    {% for improvement in artifacts.external.improvements %}
-                                        <li>
-                                            <strong>{{ improvement.title }}</strong>
-                                            <p>{{ improvement.suggestion }}</p>
-                                            {% if improvement.benefit %}
-                                            <span class="benefit">Benefit: {{ improvement.benefit }}</span>
-                                            {% endif %}
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-
-                            {% if not (artifacts.description and artifacts.description.improvements) and 
-                                not (artifacts.internal and artifacts.internal.improvements) and 
-                                not (artifacts.external and artifacts.external.improvements) %}
-                                <p>No improvements generated yet.</p>
-                            {% endif %}
-                        </div>
+                    {% endif %}
+                    {% if objection.challenging_question %}
+                    <div class="challenging-question">
+                      <strong>Challenging Question:</strong> {{ objection.challenging_question }}
                     </div>
-                </div>
-            {% else %}
-                <p>No project connected yet. <a href="{{ url_for('setup') }}" class="button">Set up a project</a></p>
-            {% endif %}
-        </div>
-    </div>
-{% endblock %}section">
-                                    <div class="label">What It Is:</div>
-                                    <div class="content">{{ artifacts.internal.what_it_is }}</div>
-                                </div>
+                    {% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>
 
-                                <div class="text-section">
-                                    <div class="label">Customer Pain:</div>
-                                    <div class="content">{{ artifacts.internal.customer_pain }}</div>
-                                </div>
-
-                                <div class="text-section">
-                                    <div class="label">Our Solution:</div>
-                                    <div class="content">{{ artifacts.internal.our_solution }}</div>
-                                </div>
-
-                                <div class="text-section">
-                                    <div class="label">Business Impact:</div>
-                                    <div class="content">{{ artifacts.internal.business_impact }}</div>
-                                </div>
-
-                                {% if artifacts.internal.timeline %}
-                                <div class="text-section">
-                                    <div class="label">Timeline:</div>
-                                    <div class="content">{{ artifacts.internal.timeline }}</div>
-                                </div>
-                                {% endif %}
-
-                                {% if artifacts.internal.team_needs %}
-                                <div class="text-
+                <!-- Improvements Section -->
+                <h3>Strategic Improvements</h3>
+                <ul class="improvements">
+                  {% for improvement in improvements %}
+                  <li>
+                    <strong>{{ improvement.title }}</strong>
+                    <p>{{ improvement.suggestion }}</p>
+                    {% if improvement.rationale %}
+                    <div class="rationale">
+                      <strong>Rationale:</strong> {{ improvement.rationale }}
+                    </div>
+                    {% endif %}
+                    {% if improvement.minimum_version %}
+                    <div class="minimum-version">
+                      <strong>Minimum Version:</strong> {{ improvement.minimum_version }}
+                    </div>
+                    {% endif %}
+                  </li>
+                  {% endfor %}
+                </ul>

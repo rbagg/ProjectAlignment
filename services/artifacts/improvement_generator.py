@@ -48,8 +48,6 @@ class ImprovementGenerator(BaseGenerator):
         dummy_artifact = {"type": artifact_type}
         return self.generate_for_artifact(content, dummy_artifact, artifact_type)
 
-    # Enhanced approach for the ImprovementGenerator - Focus on focus, simplification and pushing boundaries
-
     def generate_for_artifact(self, project_content, artifact_content, artifact_type):
         """
         Generate substantive improvements focusing on focus, simplification and pushing boundaries
@@ -112,6 +110,9 @@ class ImprovementGenerator(BaseGenerator):
             fallback_method=self._strategic_fallback_improvements,
             fallback_args={'artifact_type': artifact_type, 'artifact_content': artifact_content}
         )
+
+        # Print debug info to help with troubleshooting
+        print(f"GENERATED IMPROVEMENTS FOR {artifact_type}: {improvements_json[:200]}...")
 
         return improvements_json
 

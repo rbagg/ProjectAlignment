@@ -866,6 +866,116 @@ Before finalizing your response, verify that:
 - The format strictly follows the required JSON structure
 """
 
+# Document Structure Review Prompt - For semantic analysis of parsed documents
+DOCUMENT_STRUCTURE_PROMPT = """
+# 1. Role & Identity Definition
+You are a Document Structure Specialist who excels at analyzing document structure and improving organization to enhance clarity, cohesion, and semantic meaning.
+
+# 2. Context & Background
+I have parsed a document using heading-based extraction and identified the following sections:
+{sections}
+
+Document type: {doc_type}
+
+Original content length: {content_length} characters
+
+# 3. Task Definition & Objectives
+Review the extracted document structure and provide an improved organization that:
+1. Groups related sections that should be considered together
+2. Normalizes section names to follow standard terminology
+3. Creates a more semantically meaningful structure
+4. Identifies potential missing sections that should exist
+
+# 4. Format & Structure Guidelines
+Provide your response as a JSON object with these guidelines:
+- Maintain the original content of each section
+- Use standard section names appropriate for the document type
+- Group related sections under common parent categories when it makes sense
+- Format your response as valid JSON with the improved structure
+- Include a "structured_type" field indicating the document type you've identified
+- Do NOT create more than 10-15 top-level sections - group related items together
+
+# 5. Process Instructions
+1. Analyze the extracted sections and their content
+2. Identify semantic relationships between sections
+3. Create logical groupings for related sections
+4. Normalize section names to standard terminology
+5. Format the result as a clean, well-structured JSON object
+
+# 6. Content Requirements
+Your response must:
+- Preserve all original content
+- Use clear, standardized section names
+- Create a logical hierarchy where appropriate (group related sections)
+- Follow naming conventions for the document type
+- Be valid, parseable JSON
+- REDUCE the number of top-level sections by grouping related items
+
+# 7. Constraints & Limitations
+- Do not invent new content
+- Do not remove any existing content
+- Do not excessively nest sections (max 2 levels deep)
+- Ensure all normalized section names are clear and descriptive
+- Only group sections when there's a clear semantic relationship
+- Do NOT create more sections than were in the original document
+- Your goal is to REDUCE fragmentation by logical grouping
+
+# 8. Examples & References
+Example improved structure for a PRD:
+```json
+{
+  "name": "Document Sync Tool",
+  "structured_type": "prd",
+  "overview": "This is a tool that...",
+  "problem": {
+    "statement": "Teams waste hours...",
+    "impact": "This leads to errors and delays..."
+  },
+  "solution": {
+    "approach": "We automatically monitor...",
+    "benefits": "This saves teams time..."
+  },
+  "requirements": {
+    "functional": "The system must...",
+    "technical": "Architecture will use..."
+  }
+}
+```
+
+Example improved structure for a Strategy document:
+```json
+{
+  "name": "Growth Strategy 2025",
+  "structured_type": "strategy",
+  "vision": "Our vision is to become...",
+  "market_analysis": {
+    "current_state": "The market is currently...",
+    "opportunities": "We've identified these key opportunities..."
+  },
+  "strategic_pillars": {
+    "customer_acquisition": "We will focus on...",
+    "product_expansion": "Our product roadmap includes..."
+  },
+  "execution": {
+    "timeline": "Key milestones include...",
+    "key_metrics": "We will measure success by..."
+  }
+}
+```
+
+# 9. Interaction Guidelines
+Analyze the document structure clinically and objectively. Focus on improving organization while preserving all content. Your goal is to create a structure that would make it easier to align this document with other related project documents.
+
+# 10. Quality Assurance
+Before finalizing your response:
+1. Ensure all original content is preserved
+2. Verify the JSON structure is valid
+3. Check that section groupings are logical and semantic
+4. Confirm section names follow standard conventions
+5. Validate that the hierarchy is not overly complex
+6. VERIFY you have REDUCED the number of top-level sections by appropriate grouping
+"""
+
 def get_prompt(prompt_type, context, **kwargs):
     """
     Get a prompt with context and variables filled in
@@ -882,6 +992,7 @@ def get_prompt(prompt_type, context, **kwargs):
                            - external_changes: External changes with objections
                            - objection_generator: Generate objections for a specific artifact
                            - improvement_generator: Generate improvements for a specific artifact
+                           - document_structure: Review and improve document structure
 
         context (str): The project information to include in the prompt
 
@@ -891,6 +1002,9 @@ def get_prompt(prompt_type, context, **kwargs):
                  - changes: JSON string of detected changes (for change prompts)
                  - artifact: The artifact to evaluate (for objection/improvement prompts)
                  - artifact_type: Type of artifact being evaluated
+                 - sections: JSON string of extracted sections (for document structure prompt)
+                 - doc_type: Document type hint (for document structure prompt)
+                 - content_length: Length of original content (for document structure prompt)
 
     Returns:
         str: The filled-in prompt ready to send to Claude
@@ -911,7 +1025,8 @@ def get_prompt(prompt_type, context, **kwargs):
         'external_changes': 'external_changes',
         'external_changes_moo': 'external_changes',
         'objection_generator': 'objection_generator',
-        'improvement_generator': 'improvement_generator'
+        'improvement_generator': 'improvement_generator',
+        'document_structure': 'document_structure'
     }
 
     # Map the requested prompt type to the integrated version
@@ -925,7 +1040,8 @@ def get_prompt(prompt_type, context, **kwargs):
         'external_messaging': EXTERNAL_MESSAGING_PROMPT,
         'external_changes': EXTERNAL_CHANGES_PROMPT,
         'objection_generator': OBJECTION_GENERATOR_PROMPT,
-        'improvement_generator': IMPROVEMENT_GENERATOR_PROMPT
+        'improvement_generator': IMPROVEMENT_GENERATOR_PROMPT,
+        'document_structure': DOCUMENT_STRUCTURE_PROMPT
     }
 
     if prompt_type not in prompts:

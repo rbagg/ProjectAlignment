@@ -646,142 +646,69 @@ def generate_examples():
         ]
     }
 
-    # Mock example data
-    example_data = {
-        'description': {
-            'three_sentences': [
-                'The Document Sync Tool automatically synchronizes documentation across systems like PRDs, tickets, and strategy documents to eliminate inconsistencies.',
-                'Teams waste hours every week manually reconciling documentation, leading to costly errors, project delays, and implementation mistakes.',
-                'Our solution uses connectors and NLP to identify inconsistencies between documents and suggest updates to keep everything perfectly aligned.'
-            ],
-            'three_paragraphs': [
-                'The Document Sync Tool solves the pervasive problem of inconsistent documentation across disconnected systems. It integrates with tools teams already use, like Jira, Confluence, and Google Docs, and automatically monitors all documents for changes. When one document is updated, the system intelligently identifies the corresponding changes needed in other documents and suggests specific updates to keep everything aligned. This eliminates the need for error-prone manual reconciliation and ensures all documents stay in sync.',
-                'Inconsistent documentation is a huge drain on development teams. On average, teams waste over 4 hours per week reconciling documents manually. Even then, inconsistencies still slip through, causing implementation errors that delay projects by weeks. The Document Sync Tool eliminates this wasted time and effort. Its intelligent monitoring and suggestion system keeps documentation aligned automatically, letting teams focus on writing great code instead of chasing down inconsistencies.',
-                'Under the hood, the Document Sync Tool uses a sophisticated system of connectors and natural language processing. It connects to the most popular documentation tools using their APIs and monitors documents for any changes. The NLP-powered inconsistency detection engine understands the meaning and intent behind each document, allowing it to identify conflicts and suggest specific changes. The system maintains a web of bidirectional links between related documents, so everything stays in sync no matter where a change originates.'
-            ],
-            'objections': [
-                {
-                    'title': 'Missing Success Metrics',
-                    'explanation': 'The artifact does not define any measurable KPIs or success criteria to evaluate the effectiveness of the Document Sync Tool.',
-                    'impact': 'Without clear success metrics, it will be difficult to determine if the tool is delivering the intended business value and ROI.'
-                },
-                {
-                    'title': 'No Plan for Edge Cases',
-                    'explanation': 'The artifact assumes the NLP inconsistency detection will work perfectly but doesn\'t address how the system will handle ambiguity or conflicting changes.',
-                    'impact': 'Unhandled edge cases will likely result in the system making incorrect suggestions or failing to keep documents fully in sync, reducing trust in the tool.'
-                }
-            ],
-            'improvements': [
-                {
-                    'title': 'Quantify Time Savings',
-                    'suggestion': 'In the three sentences and paragraphs, provide specific metrics on the hours saved per week using the Document Sync Tool.',
-                    'benefit': 'Specific time savings metrics make the value proposition more tangible and compelling to potential customers.'
-                },
-                {
-                    'title': 'Add Vision Alignment',
-                    'suggestion': 'Incorporate the vision statement from the strategy document into the opening sentences and paragraphs to create stronger alignment between artifacts.',
-                    'benefit': 'Consistent messaging across artifacts reinforces the core value proposition and keeps the team aligned on the north star vision.'
-                }
-            ]
-        },
-        'internal': {
-            'subject': 'Internal Brief: Document Sync Tool',
-            'what_it_is': 'A tool that synchronizes documentation across PRDs, tickets, and strategy docs. It detects inconsistencies and suggests updates to keep everything aligned.',
-            'customer_pain': 'Teams waste hours each week reconciling inconsistencies between documentation in different systems. This leads to errors, delays, and frustration.',
-            'our_solution': 'We will build connectors to Jira, Confluence, and Google Docs. Our inconsistency detection engine will flag misalignments and suggest updates to synchronize documentation.',
-            'business_impact': 'Will significantly reduce time wasted on manual documentation reconciliation. Expected to reduce implementation errors and accelerate project delivery timelines.',
-            'timeline': 'Design phase to be completed by early June. Alpha release targeted for mid-July, followed by beta in August. GA release goal is end of September.',
-            'team_needs': 'Requires dedicated backend and frontend engineering resources, as well as ML expertise. Has dependencies on planned upgrades to Jira and Confluence APIs.',
-            'objections': [
-                {
-                    'title': 'Missing Resource Details',
-                    'explanation': 'The artifact lists backend, frontend, and ML needs but does not specify the number of resources required for each area.',
-                    'impact': 'Lack of detailed resource requirements can lead to inadequate staffing, causing missed deadlines and reduced scope.'
-                },
-                {
-                    'title': 'Unclear Beta Criteria',
-                    'explanation': 'The timeline includes an August beta release but does not define the criteria that must be met to graduate from alpha to beta.',
-                    'impact': 'Without clear beta entrance criteria, the team may prematurely release an unstable product, frustrating early adopters and damaging reputation.'
-                }
-            ],
-            'improvements': [
-                {
-                    'title': 'Quantify Business Impact',
-                    'suggestion': 'Specify the expected hours saved per week and percentage reduction in errors.',
-                    'benefit': 'Quantified benefits make the business case more compelling and enable clear success measurement.'
-                },
-                {
-                    'title': 'Add Resource Requirements',
-                    'suggestion': 'Include the number of backend, frontend and ML resources needed, as specified in the tickets.',
-                    'benefit': 'Specifying resource needs helps with planning and ensures the PRD is consistent with the more detailed tickets.'
-                }
-            ]
-        },
-        'external': {
-            'headline': 'Automate document alignment across systems',
-            'pain_point': 'Your team wastes hours every week manually reconciling inconsistent documentation across different systems. This leads to errors, delays, and frustration for everyone involved.',
-            'solution': 'Our Document Sync Tool automatically monitors your connected documents for changes and intelligently suggests updates to keep everything in sync. Integration with your existing systems takes less than 30 minutes with no workflow disruption.',
-            'benefits': 'Eliminate hours spent every week on manual document alignment. Reduce costly errors caused by inconsistencies. Improve cross-functional collaboration with confidence that documentation is always up to date.',
-            'call_to_action': 'See how much time you can save with a free 14-day trial.',
-            'objections': [
-                {
-                    'title': 'Unsupported Systems',
-                    'explanation': 'The artifact claims "integration with your existing systems" but does not specify which systems are actually supported. This vagueness creates confusion and limits the audience.',
-                    'impact': 'Prospects using unsupported systems will be less likely to engage, reducing the pool of potential customers by up to 50%.'
-                },
-                {
-                    'title': 'Unrealistic Setup Time',
-                    'explanation': 'The "30-minute setup" claim seems unrealistic given the complexity of connecting to and syncing multiple documentation systems. This sets the wrong expectation.',
-                    'impact': 'When actual setup takes longer than promised, customer satisfaction drops and negative word-of-mouth increases, damaging brand trust.'
-                }
-            ],
-            'improvements': [
-                {
-                    'title': 'Clarify System Integrations',
-                    'suggestion': 'Explicitly list the documentation systems the tool integrates with (e.g., Jira, Confluence, Google Docs) and ensure this list is consistent across all project documents.',
-                    'benefit': 'Clarity on supported integrations prevents customer confusion and ensures consistent expectations.'
-                },
-                {
-                    'title': 'Strengthen Error Reduction Benefit',
-                    'suggestion': 'Provide a tangible example of a costly error that can be prevented by eliminating documentation inconsistencies.',
-                    'benefit': 'Specific examples of prevented errors make the benefit more relatable and impactful for potential customers.'
-                }
-            ]
-        },
-        'direct_objections': [
-            {
-                'title': 'Missing Specifics on Time Savings',
-                'explanation': 'The artifact claims to "save hours per week" but doesn\'t quantify the actual time savings users can expect.',
-                'impact': 'Without specific, measurable benefits, it will be harder to convince users to adopt the tool and realize the full value.'
-            },
-            {
-                'title': 'Lacks Differentiation',
-                'explanation': 'The description "syncs your documents and keeps everything aligned" doesn\'t clearly differentiate this tool from other document management solutions.',
-                'impact': 'In a crowded market of documentation tools, lack of differentiation makes it difficult to stand out and attract users from competitors.'
-            }
-        ],
-        'direct_improvements': [
-            {
-                'title': 'Quantify Time Savings',
-                'suggestion': 'Specify the typical hours per week teams will save using the Document Sync Tool, based on user research or early testing.',
-                'benefit': 'Quantifying time savings helps prospects quickly grasp the concrete value and builds a stronger case for adoption.'
-            },
-            {
-                'title': 'Highlight Error Reduction',
-                'suggestion': 'Mention the reduction in errors and rework that comes from always having documents in sync.',
-                'benefit': 'Reduced errors means higher quality work with less wasted effort, which translates to more productive teams and faster time-to-market.'
-            }
-        ],
-        'objection_input': {
-            'headline': 'Save hours per week on documentation',
-            'description': 'Our tool automatically syncs your documents and keeps everything aligned.'
-        },
-        'improvement_input': {
+    # Convert to JSON string as required by generators
+    project_content_json = json.dumps(test_project)
+
+    try:
+        logger.info("Generating real examples using generators...")
+
+        # Generate project description using real generator
+        logger.info("Generating project description...")
+        description_json = project_description_generator.generate(project_content_json)
+        description_data = json.loads(description_json)
+
+        # Generate internal messaging using real generator
+        logger.info("Generating internal messaging...")
+        internal_json = internal_messaging_generator.generate(project_content_json)
+        internal_data = json.loads(internal_json)
+
+        # Generate external messaging using real generator
+        logger.info("Generating external messaging...")
+        external_json = external_messaging_generator.generate(project_content_json)
+        external_data = json.loads(external_json)
+
+        # Create input artifact for direct objection/improvement tests
+        objection_input = {
             'headline': 'Save hours per week on documentation',
             'description': 'Our tool automatically syncs your documents and keeps everything aligned.'
         }
-    }
 
+        # Generate direct objections using real generator
+        logger.info("Generating direct objections...")
+        direct_objections_json = objection_generator.generate_for_artifact(
+            test_project, objection_input, 'external')
+        direct_objections = json.loads(direct_objections_json)
+
+        # Log the format of the first objection to verify new fields
+        if direct_objections and len(direct_objections) > 0:
+            logger.info(f"Sample direct objection format: {json.dumps(direct_objections[0], indent=2)}")
+
+        # Generate direct improvements using real generator
+        logger.info("Generating direct improvements...")
+        direct_improvements_json = improvement_generator.generate_for_artifact(
+            test_project, objection_input, 'external')
+        direct_improvements = json.loads(direct_improvements_json)
+
+        # Log the format of the first improvement to verify new fields
+        if direct_improvements and len(direct_improvements) > 0:
+            logger.info(f"Sample direct improvement format: {json.dumps(direct_improvements[0], indent=2)}")
+
+        # Combine all data into example_data dictionary
+        example_data = {
+            'description': description_data,
+            'internal': internal_data,
+            'external': external_data,
+            'direct_objections': direct_objections,
+            'direct_improvements': direct_improvements,
+            'objection_input': objection_input,
+            'improvement_input': objection_input  # Same input used for both
+        }
+
+        logger.info("Successfully generated all examples with real generators")
+
+    except Exception as e:
+        logger.error(f"Error generating examples with real generators: {str(e)}")
+    
     return example_data
 
 if __name__ == '__main__':

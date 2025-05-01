@@ -1,3 +1,91 @@
+/* static/css/minimal.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f8f8;
+    margin: 0;
+    padding: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+h1, h2, h3, h4 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+a {
+    color: #0366d6;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.container {
+    margin-bottom: 2rem;
+}
+
+.section {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #fff;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.section-title {
+    border-bottom: 1px solid #e1e4e8;
+    padding-bottom: 0.5rem;
+    margin-top: 0;
+}
+
+.flash {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 3px;
+}
+
+.flash.success {
+    background-color: #dcffe4;
+    color: #166534;
+    border: 1px solid #a7f3d0;
+}
+
+.flash.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+button, .button {
+    background-color: #0366d6;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+button:hover, .button:hover {
+    background-color: #024ea0;
+}
+
+input, textarea, select {
+    padding: 0.5rem;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 1rem;
+}
+
 /* Styles for objections */
 .objections {
     list-style-type: none;
@@ -36,6 +124,16 @@
     font-size: 0.9rem;
 }
 
+/* New style for challenging questions */
+.challenging-question {
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #d32f2f;
+    padding: 0.5rem;
+    background-color: rgba(211, 47, 47, 0.05);
+    border-radius: 4px;
+}
+
 /* Styles for improvements */
 .improvements {
     list-style-type: none;
@@ -72,4 +170,89 @@
     font-weight: 500;
     color: #0e7490;
     font-size: 0.9rem;
+}
+
+/* New styles for strategic improvements */
+.rationale {
+    margin-top: 0.5rem;
+    color: #0d47a1;
+    padding: 0.5rem;
+    background-color: rgba(13, 71, 161, 0.05);
+    border-radius: 4px;
+}
+
+.minimum-version {
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #1565c0;
+    padding: 0.5rem;
+    background-color: rgba(21, 101, 192, 0.05);
+    border-radius: 4px;
+    border-left: 3px solid #1565c0;
+}
+
+/* Enhanced styles for objections and improvements */
+.objections li, .improvements li {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.objections li {
+    background-color: #fff8f8;
+    border: 1px solid #ffcdd2;
+    border-left: 5px solid #e53935;
+}
+
+.improvements li {
+    background-color: #f5f9ff;
+    border: 1px solid #bbdefb;
+    border-left: 5px solid #1976d2;
+}
+
+.objections li strong, .improvements li strong {
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.objections li p, .improvements li p {
+    margin-bottom: 0.5rem;
+}
+
+.impact, .rationale {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.impact {
+    color: #c62828;
+    background-color: rgba(198, 40, 40, 0.05);
+}
+
+/* Two-column layout for objections and improvements */
+.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Additional styles for better readability */
+pre {
+    background-color: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid #e1e4e8;
+}
+
+ol, ul {
+    padding-left: 1.5rem;
 }

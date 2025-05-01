@@ -48,8 +48,6 @@ class ObjectionGenerator(BaseGenerator):
         dummy_artifact = {"type": artifact_type}
         return self.generate_for_artifact(content, dummy_artifact, artifact_type)
 
-    # Enhanced approach for the ObjectionGenerator - Focus on challenging assumptions
-
     def generate_for_artifact(self, project_content, artifact_content, artifact_type):
         """
         Generate thought-provoking objections that challenge core assumptions
@@ -112,6 +110,9 @@ class ObjectionGenerator(BaseGenerator):
             fallback_method=self._substantive_fallback_objections,
             fallback_args={'artifact_type': artifact_type, 'artifact_content': artifact_content}
         )
+
+        # Print debug info to help with troubleshooting
+        print(f"GENERATED OBJECTIONS FOR {artifact_type}: {objections_json[:200]}...")
 
         return objections_json
 
